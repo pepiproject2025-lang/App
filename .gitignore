@@ -43,3 +43,10 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
+
+# 가상환경 무시
+app_backend/venv/
+__pycache__/
+*.pyc
+app_backend/__pycache__/
+app_backend/*.pyc
