@@ -105,21 +105,21 @@ class _DiagPageState extends State<DiagPage> {
                 ),
                 const SizedBox(height: 18),
 
-                const Text('나이', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600)),
-                const SizedBox(height: 8),
-                TextFormField(
-                  controller: _ageCtrl,
-                  keyboardType: TextInputType.number,
-                  decoration: _inputDecoration().copyWith(hintText: '나이를 입력하세요'),
-                ),
-                const SizedBox(height: 22),
+                // const Text('나이', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600)),
+                // const SizedBox(height: 8),
+                // TextFormField(
+                //   controller: _ageCtrl,
+                //   keyboardType: TextInputType.number,
+                //   decoration: _inputDecoration().copyWith(hintText: '나이를 입력하세요'),
+                // ),
+                // const SizedBox(height: 22),
 
                 // 업로드 박스
                 GestureDetector(
                   onTap: _pickImage, // ✅ image_picker 사용
                   child: Container(
                     width: double.infinity,
-                    constraints: const BoxConstraints(minHeight: 160),
+                    constraints: const BoxConstraints(minHeight: 220),
                     padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
                     decoration: BoxDecoration(
                       color: Colors.white,
@@ -133,7 +133,7 @@ class _DiagPageState extends State<DiagPage> {
                         ? Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        const Icon(Icons.photo_camera_outlined, size: 40, color: Colors.black54),
+                        const Icon(Icons.photo_camera_outlined, size: 50, color: Colors.black54),
                         const SizedBox(height: 10),
                         Text('안구 사진 업로드',
                             style: TextStyle(fontSize: 14, color: Colors.black.withOpacity(0.65))),
@@ -147,7 +147,7 @@ class _DiagPageState extends State<DiagPage> {
                       child: Image.memory(
                         _pickedBytes!,
                         fit: BoxFit.cover,
-                        height: 220,
+                        height: 260,
                         width: double.infinity,
                       ),
                     ),
@@ -236,7 +236,6 @@ class _DiagPageState extends State<DiagPage> {
       ),
     );
 
-    
   }
   // ✅ 백엔드 호출 함수
   Future<String> _requestDiagnosis(Uint8List imageBytes) async {
