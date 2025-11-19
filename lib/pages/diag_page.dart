@@ -2,6 +2,10 @@
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart'; // ✅ 교체
 import 'dart:typed_data';
+import 'dart:convert';
+import 'package:http/http.dart' as http;
+import 'package:http_parser/http_parser.dart';
+
 
 class DiagPage extends StatefulWidget {
   const DiagPage({super.key});
@@ -165,14 +169,55 @@ class _DiagPageState extends State<DiagPage> {
                       ),
                       elevation: 0,
                     ),
-                    onPressed: () async {
-                      debugPrint(
-                        '진단하기 클릭 | name=${_nameCtrl.text}, age=${_ageCtrl.text}, imageSelected=${_pickedBytes != null}',
-                      );
-                      // 입력 검증 등...
-                      await Navigator.pushNamed(context, '/loading'); // 3초 표시 후 pop
+                    // onPressed: () async {
+                    //   debugPrint(
+                    //     '진단하기 클릭 | name=${_nameCtrl.text}, age=${_ageCtrl.text}, imageSelected=${_pickedBytes != null}',
+                    //   );
+                    //   // 입력 검증 등...
+                    //   await Navigator.pushNamed(context, '/loading'); // 3초 표시 후 pop
 
+                    // },
+                    onPressed: () async {
+                      if (_pickedBytes == null) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text('안구 사진을 먼저 업로드해주세요.')),
+                        );
+                        return;
+                      }
+
+                      // 🔵 로딩 다이얼로그 표시
+                      showDialog(
+                        context: context,
+                        barrierDismissible: false,
+                        builder: (_) => const Center(child: CircularProgressIndicator()),
+                      );
+
+                      try {
+                        // 🔵 백엔드 요청
+                        final markdown = await _requestDiagnosis(_pickedBytes!);
+
+                        if (!context.mounted) return;
+                        Navigator.pop(context); // 로딩 다이얼로그 닫기
+
+                        // 🔵 결과 페이지로, 마크다운을 arguments로 전달
+                        Navigator.pushNamed(
+                          context,
+                          '/result',
+                          arguments: {
+                            'markdown': markdown,
+                            'name': _nameCtrl.text,
+                            'imageBytes': _pickedBytes,
+                          },
+                        );
+                      } catch (e) {
+                        if (!context.mounted) return;
+                        Navigator.pop(context); // 로딩 다이얼로그 닫기
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(content: Text('진단 요청 실패: $e')),
+                        );
+                      }
                     },
+
                     child: const Text(
                       '진단하기',
                       style: TextStyle(
@@ -190,5 +235,43 @@ class _DiagPageState extends State<DiagPage> {
         ),
       ),
     );
+
+    
+  }
+  // ✅ 백엔드 호출 함수
+  Future<String> _requestDiagnosis(Uint8List imageBytes) async {
+    // TODO: 실제 백엔드 주소로 변경
+    // - 웹에서 테스트: http://localhost:8000/predict
+    // - 안드로이드 에뮬레이터: http://10.0.2.2:8000/predict
+    final uri = Uri.parse('http://localhost:8000/predict');
+
+    final request = http.MultipartRequest('POST', uri)
+      ..files.add(
+        http.MultipartFile.fromBytes(
+          'image', // FastAPI의 파라미터 이름과 동일해야 함
+          imageBytes,
+          filename: 'eye.jpg',
+          contentType: MediaType('image', 'jpeg'),
+        ),
+      )
+      ..fields['note'] = _nameCtrl.text; // 선택사항: note로 이름 보내기
+
+    final streamed = await request.send();
+    final response = await http.Response.fromStream(streamed);
+
+    if (response.statusCode != 200) {
+      throw Exception('Backend error: ${response.statusCode}');
+    }
+    print('RAW BODY = ${response.body}');
+    final body = jsonDecode(response.body);
+    final data = body['data'];
+    final modelOutput = data?['model_output'];
+    
+    if (modelOutput is String) {
+      return modelOutput.trim(); // 마크다운 문자열이라고 가정
+    } else {
+      // 혹시 리스트/맵이면 적당히 문자열로 변환
+      return modelOutput.toString();
+    }
   }
 }
