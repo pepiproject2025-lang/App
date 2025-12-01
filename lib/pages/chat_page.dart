@@ -327,7 +327,7 @@ class _InputBar extends StatelessWidget {
 
   final TextEditingController controller;
   final FocusNode focusNode;
-  final void Function(String) onSend;
+  final Future<void> Function(String) onSend;
 
   @override
   Widget build(BuildContext context) {
