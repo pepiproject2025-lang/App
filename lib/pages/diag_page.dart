@@ -157,7 +157,7 @@ class _DiagPageState extends State<DiagPage> {
                 const SizedBox(height: 24),
                 const SizedBox(height: 30),
 
-                // 진단하기 버튼 (네가 준 스타일 그대로)
+                // 진단하기 버튼
                 SizedBox(
                   width: double.infinity,
                   height: 52,
@@ -169,14 +169,6 @@ class _DiagPageState extends State<DiagPage> {
                       ),
                       elevation: 0,
                     ),
-                    // onPressed: () async {
-                    //   debugPrint(
-                    //     '진단하기 클릭 | name=${_nameCtrl.text}, age=${_ageCtrl.text}, imageSelected=${_pickedBytes != null}',
-                    //   );
-                    //   // 입력 검증 등...
-                    //   await Navigator.pushNamed(context, '/loading'); // 3초 표시 후 pop
-
-                    // },
                     onPressed: () async {
                       if (_pickedBytes == null) {
                         ScaffoldMessenger.of(context).showSnackBar(
@@ -185,39 +177,43 @@ class _DiagPageState extends State<DiagPage> {
                         return;
                       }
 
-                      // 🔵 로딩 다이얼로그 표시
-                      showDialog(
-                        context: context,
-                        barrierDismissible: false,
-                        builder: (_) => const Center(child: CircularProgressIndicator()),
-                      );
+                      // 화면에 보여줄 값들 미리 저장
+                      final Uint8List imageBytes = _pickedBytes!;
+                      final String petName = _nameCtrl.text;
+
+                      // 1) 먼저 로딩 페이지로 이동
+                      Navigator.pushNamed(context, '/loading');
 
                       try {
-                        // 🔵 백엔드 요청
-                        final markdown = await _requestDiagnosis(_pickedBytes!);
+                        // 2) 로딩 페이지가 떠 있는 동안 백엔드에 진단 요청
+                        final markdown = await _requestDiagnosis(imageBytes);
 
                         if (!context.mounted) return;
-                        Navigator.pop(context); // 로딩 다이얼로그 닫기
 
-                        // 🔵 결과 페이지로, 마크다운을 arguments로 전달
+                        // 3) 로딩 페이지 닫기
+                        Navigator.pop(context);
+
+                        // 4) 결과 페이지로 이동 (마크다운 + 이름 + 이미지 전달)
                         Navigator.pushNamed(
                           context,
                           '/result',
                           arguments: {
                             'markdown': markdown,
-                            'name': _nameCtrl.text,
-                            'imageBytes': _pickedBytes,
+                            'name': petName,
+                            'imageBytes': imageBytes,
                           },
                         );
                       } catch (e) {
                         if (!context.mounted) return;
-                        Navigator.pop(context); // 로딩 다이얼로그 닫기
+
+                        // 에러가 나도 로딩 페이지는 닫아주기
+                        Navigator.pop(context);
+
                         ScaffoldMessenger.of(context).showSnackBar(
                           SnackBar(content: Text('진단 요청 실패: $e')),
                         );
                       }
                     },
-
                     child: const Text(
                       '진단하기',
                       style: TextStyle(
@@ -227,7 +223,7 @@ class _DiagPageState extends State<DiagPage> {
                       ),
                     ),
                   ),
-                ),
+                )
                 const SizedBox(height: 8),
               ],
             ),

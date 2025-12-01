@@ -40,7 +40,7 @@ async def predict(
     image: UploadFile = File(...),
     note: str = Form("")
 ):
-    # 1️⃣ 파일 검증
+    # 1️ 파일 검증
     if image.content_type not in ALLOWED_TYPES:
         return JSONResponse(status_code=415, content={
             "status": "error",
@@ -56,10 +56,10 @@ async def predict(
             "message": f"File exceeds {MAX_FILE_MB}MB limit"
         })
 
-    # 2️⃣ Base64 인코딩
+    # 2️ Base64 인코딩
     b64_img = base64.b64encode(content).decode("utf-8")
 
-    # 3️⃣ Runpod에 보낼 프롬프트 & 설정 (고정값)
+    # 3️ Runpod에 보낼 프롬프트 & 설정 (고정값)
     PROMPT = """[diagnosis_report]
 당신은 반려동물의 질환 진단을 위한 수의사입니다.
 사진을 보고 반려동물의 안구 질환을 진단하여 진단 리포트를 작성하세요.
@@ -72,11 +72,13 @@ async def predict(
             "gen": {
                 "max_new_tokens": 256,
                 "temperature": 0.2
-            }
+            },
+            "model" : "diag",
+            "use_lora": True
         }
     }
 
-    # 4️⃣ Runpod 호출
+    # 4️ Runpod 호출
     try:
         async with httpx.AsyncClient(timeout=180) as client:
             response = await client.post(
@@ -126,3 +128,40 @@ async def predict(
             "code": "RUNPOD_CALL_FAILED",
             "message": f"{type(e).__name__}: {e}"
         })
+    
+
+from pydantic import BaseModel
+
+class ChatRequest(BaseModel):
+    messages: str
+
+@app.post("/chat")
+async def chat(req: ChatRequest):
+    payload = {
+        "input": {
+            "prompt": req.message,
+            "images": [],   # 필요하면 나중에 이미지도 붙일 수 있음
+            "gen": {
+                "max_new_tokens": 512,
+                "temperature": 0.2,
+            },
+            "mode": "chat",     # 챗봇 모드 → 기본적으로 LoRA OFF
+            "use_lora": False   # 확실히 끄고 싶으면 명시
+        }
+    }
+
+    async with httpx.AsyncClient(timeout=180) as client:
+        res = await client.post(
+            RUNPOD_URL,
+            json=payload,
+            headers={"Authorization": f"Bearer {RUNPOD_API_KEY}"}
+        )
+
+    data = res.json()
+    text = data.get("output") or data.get("data") or data
+    # text 파싱해서 Flutter chat_page 로 넘기면 됨
+    return {"answer": text}
+
+@app.get("/")
+def root():
+    return {"msg": "FASTAPI OK"}

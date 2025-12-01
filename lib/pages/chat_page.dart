@@ -1,5 +1,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'dart:convert';
+import 'package:http/http.dart' as http; 
 
 class ChatPage extends StatefulWidget {
   const ChatPage({super.key});
@@ -30,7 +32,7 @@ class _ChatPageState extends State<ChatPage> {
     super.dispose();
   }
 
-  void _send(String text) {
+  Future<void> _send(String text) async {
     final trimmed = text.trim();
     if (trimmed.isEmpty) return;
 
@@ -42,16 +44,47 @@ class _ChatPageState extends State<ChatPage> {
 
     // 최신으로 스크롤
     _jumpToBottomSoon();
+    try {
+      // ★ 백엔드 주소 (PC에서 돌리는 FastAPI라면 보통 이런 식)
+      // - 안드로이드 에뮬레이터: http://10.0.2.2:8000
+      // - 아이폰 시뮬레이터 / 웹:   http://localhost:8000 또는 실제 IP
+      final uri = Uri.parse('http://10.0.2.2:8000/chat')
 
-    // 데모용 봇 응답 (3점 리더 → 답장)
-    Timer(const Duration(milliseconds: 700), () {
+      final response = await http.post(
+        uri,
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({'message': trimmed}),
+      );
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        // main.py에서 return {"answer": text} 라고 했으니까
+        final botText = data['answer']?.toString() ?? '응답을 이해하지 못했어요.';
+
+        if (!mounted) return;
+        setState(() {
+          _messages.add(_Msg.fromBot(botText));
+          _botTyping = false;
+        });
+        _jumpToBottomSoon();
+      } else {
+        if (!mounted) return;
+        setState(() {
+          _messages.add(
+            _Msg.fromBot('서버 오류가 발생했어요. (${response.statusCode})'),
+          );
+          _botTyping = false;
+        });
+        _jumpToBottomSoon();
+      }
+    } catch (e) {
       if (!mounted) return;
       setState(() {
-        _messages.add(_Msg.fromBot('“$trimmed”에 대해 더 자세히 설명해 드릴게요.'));
+        _messages.add(_Msg.fromBot('요청 중 오류가 발생했어요: $e'));
         _botTyping = false;
       });
       _jumpToBottomSoon();
-    });
+    }
   }
 
   void _jumpToBottomSoon() {
