@@ -1,7 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
 import 'diag_start_page.dart'; // '/start'에서 사용할 페이지
+import 'dart:typed_data';
 
+const String kDummyMarkdown = '''
+# ERROR: No Data
+## 진단 결과 데이터를 불러올 수 없습니다.
+''';
 class DiagResult extends StatelessWidget {
   const DiagResult({super.key});
 
@@ -11,6 +16,29 @@ class DiagResult extends StatelessWidget {
     final Color cardColor = Colors.white;
     final Color warningColor = const Color(0xFFFFF3E0);
     final TextTheme textTheme = Theme.of(context).textTheme;
+
+    final args = ModalRoute.of(context)?.settings.arguments;
+    String markdown = kDummyMarkdown;
+    String petName = "나이 미입력";
+    Uint8List? imageBytes;
+
+    if (args is Map){
+      final argMd = args['markdown'] as String?;
+      if (argMd != null) {
+        markdown = argMd;
+      }
+      final argName = args['name'] as String?;
+      if (argName != null) {
+        petName = argName;
+      }
+      final argImageBytes = args['imageBytes'] as Uint8List?;
+      if (argImageBytes != null) {
+        imageBytes = argImageBytes;
+      }
+    } else if (args is String) {
+      markdown = args;
+    }
+
 
     return SafeArea(
       child: Center(
@@ -66,10 +94,16 @@ class DiagResult extends StatelessWidget {
                 _buildWarningCard(warningColor),
                 const SizedBox(height: 24),
 
-                _buildResultSummaryCard(cardColor, primaryColor, textTheme),
+                _buildResultSummaryCard(
+                  cardColor, 
+                  primaryColor, 
+                  textTheme,
+                  petName,
+                  imageBytes,
+                ),
                 const SizedBox(height: 24),
 
-                _buildDetailsCard(cardColor, textTheme),
+                _buildDetailsCard(cardColor, textTheme, markdown),
                 const SizedBox(height: 32),
 
                 _buildActionButtons(context),
@@ -114,7 +148,7 @@ class DiagResult extends StatelessWidget {
     );
   }
 
-  Widget _buildResultSummaryCard(Color cardColor, Color primaryColor, TextTheme textTheme) {
+  Widget _buildResultSummaryCard(Color cardColor, Color primaryColor, TextTheme textTheme, String petName, Uint8List? imageBytes) {
     return Card(
       elevation: 2,
       color: cardColor,
@@ -124,23 +158,30 @@ class DiagResult extends StatelessWidget {
         children: [
           ClipRRect(
             borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
-            child: Image.asset(
-              'assets/sample_img.jpg',
-              height: 200,
-              width: double.infinity,
-              fit: BoxFit.cover,
-            ),
+            child: imageBytes != null
+                ? Image.memory(
+                    imageBytes,
+                    width: double.infinity,
+                    height: 200,
+                    fit: BoxFit.cover,
+                  )
+                : Container(
+                    width: double.infinity,
+                    height: 200,
+                    color: Colors.grey[300],
+                    child: const Icon(Icons.image_not_supported, size: 80, color: Colors.white70),
+                  ),
           ),
           Padding(
             padding: const EdgeInsets.all(16),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                _buildInfoText(textTheme, '이름', '해피'),
-                const SizedBox(height: 8),
-                _buildInfoText(textTheme, '나이', '3살'),
-                const SizedBox(height: 8),
-                _buildInfoText(textTheme, '사용자', 'aaaa@gmail.com'),
+                _buildInfoText(textTheme, '이름', petName),
+                // const SizedBox(height: 8),
+                // _buildInfoText(textTheme, '나이', '3살'),
+                // const SizedBox(height: 8),
+                // _buildInfoText(textTheme, '사용자', 'aaaa@gmail.com'),
               ],
             ),
           ),
@@ -164,7 +205,7 @@ class DiagResult extends StatelessWidget {
     );
   }
 
-  Widget _buildDetailsCard(Color cardColor, TextTheme textTheme) {
+  Widget _buildDetailsCard(Color cardColor, TextTheme textTheme, String markdown) {
     return Card(
       elevation: 2,
       color: cardColor,
@@ -178,22 +219,7 @@ class DiagResult extends StatelessWidget {
             p: textTheme.bodyMedium?.copyWith(height: 1.5),
             listBullet: textTheme.bodyMedium,
           ),
-          data: """
-# 해피 (3살)
-
-## 🩺 진단 결과
-- **진단명**: 결막염
-
-## 👁 사진에서 보이는 증상
-- 눈 흰자에 붉은기
-- 눈곱이 평소보다 많이 보임
-- 눈물이 자주 흐름
-
-## ℹ️ 추가 정보
-결막염은 눈을 덮고 있는 얇은 막(결막)에 염증이 생기는 질환이에요.  
-보통은 이물질, 알레르기, 세균 등에 의해 발생하며, 가려움이나 눈곱 증가 같은 증상이 동반될 수 있어요.  
-심해질 경우 시력에도 영향을 줄 수 있으니 주의가 필요합니다.
-          """,
+          data: markdown,
         ),
       ),
     );

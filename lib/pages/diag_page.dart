@@ -2,6 +2,10 @@
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart'; // ✅ 교체
 import 'dart:typed_data';
+import 'dart:convert';
+import 'package:http/http.dart' as http;
+import 'package:http_parser/http_parser.dart';
+
 
 class DiagPage extends StatefulWidget {
   const DiagPage({super.key});
@@ -101,21 +105,21 @@ class _DiagPageState extends State<DiagPage> {
                 ),
                 const SizedBox(height: 18),
 
-                const Text('나이', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600)),
-                const SizedBox(height: 8),
-                TextFormField(
-                  controller: _ageCtrl,
-                  keyboardType: TextInputType.number,
-                  decoration: _inputDecoration().copyWith(hintText: '나이를 입력하세요'),
-                ),
-                const SizedBox(height: 22),
+                // const Text('나이', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600)),
+                // const SizedBox(height: 8),
+                // TextFormField(
+                //   controller: _ageCtrl,
+                //   keyboardType: TextInputType.number,
+                //   decoration: _inputDecoration().copyWith(hintText: '나이를 입력하세요'),
+                // ),
+                // const SizedBox(height: 22),
 
                 // 업로드 박스
                 GestureDetector(
                   onTap: _pickImage, // ✅ image_picker 사용
                   child: Container(
                     width: double.infinity,
-                    constraints: const BoxConstraints(minHeight: 160),
+                    constraints: const BoxConstraints(minHeight: 220),
                     padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
                     decoration: BoxDecoration(
                       color: Colors.white,
@@ -129,7 +133,7 @@ class _DiagPageState extends State<DiagPage> {
                         ? Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        const Icon(Icons.photo_camera_outlined, size: 40, color: Colors.black54),
+                        const Icon(Icons.photo_camera_outlined, size: 50, color: Colors.black54),
                         const SizedBox(height: 10),
                         Text('안구 사진 업로드',
                             style: TextStyle(fontSize: 14, color: Colors.black.withOpacity(0.65))),
@@ -143,7 +147,7 @@ class _DiagPageState extends State<DiagPage> {
                       child: Image.memory(
                         _pickedBytes!,
                         fit: BoxFit.cover,
-                        height: 220,
+                        height: 260,
                         width: double.infinity,
                       ),
                     ),
@@ -153,7 +157,7 @@ class _DiagPageState extends State<DiagPage> {
                 const SizedBox(height: 24),
                 const SizedBox(height: 30),
 
-                // 진단하기 버튼 (네가 준 스타일 그대로)
+                // 진단하기 버튼
                 SizedBox(
                   width: double.infinity,
                   height: 52,
@@ -166,12 +170,49 @@ class _DiagPageState extends State<DiagPage> {
                       elevation: 0,
                     ),
                     onPressed: () async {
-                      debugPrint(
-                        '진단하기 클릭 | name=${_nameCtrl.text}, age=${_ageCtrl.text}, imageSelected=${_pickedBytes != null}',
-                      );
-                      // 입력 검증 등...
-                      await Navigator.pushNamed(context, '/loading'); // 3초 표시 후 pop
+                      if (_pickedBytes == null) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text('안구 사진을 먼저 업로드해주세요.')),
+                        );
+                        return;
+                      }
 
+                      // 화면에 보여줄 값들 미리 저장
+                      final Uint8List imageBytes = _pickedBytes!;
+                      final String petName = _nameCtrl.text;
+
+                      // 1) 먼저 로딩 페이지로 이동
+                      Navigator.pushNamed(context, '/loading');
+
+                      try {
+                        // 2) 로딩 페이지가 떠 있는 동안 백엔드에 진단 요청
+                        final markdown = await _requestDiagnosis(imageBytes);
+
+                        if (!context.mounted) return;
+
+                        // 3) 로딩 페이지 닫기
+                        Navigator.pop(context);
+
+                        // 4) 결과 페이지로 이동 (마크다운 + 이름 + 이미지 전달)
+                        Navigator.pushNamed(
+                          context,
+                          '/result',
+                          arguments: {
+                            'markdown': markdown,
+                            'name': petName,
+                            'imageBytes': imageBytes,
+                          },
+                        );
+                      } catch (e) {
+                        if (!context.mounted) return;
+
+                        // 에러가 나도 로딩 페이지는 닫아주기
+                        Navigator.pop(context);
+
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(content: Text('진단 요청 실패: $e')),
+                        );
+                      }
                     },
                     child: const Text(
                       '진단하기',
@@ -182,7 +223,7 @@ class _DiagPageState extends State<DiagPage> {
                       ),
                     ),
                   ),
-                ),
+                )
                 const SizedBox(height: 8),
               ],
             ),
@@ -190,5 +231,42 @@ class _DiagPageState extends State<DiagPage> {
         ),
       ),
     );
+
+  }
+  // ✅ 백엔드 호출 함수
+  Future<String> _requestDiagnosis(Uint8List imageBytes) async {
+    // TODO: 실제 백엔드 주소로 변경
+    // - 웹에서 테스트: http://localhost:8000/predict
+    // - 안드로이드 에뮬레이터: http://10.0.2.2:8000/predict
+    final uri = Uri.parse('http://localhost:8000/predict');
+
+    final request = http.MultipartRequest('POST', uri)
+      ..files.add(
+        http.MultipartFile.fromBytes(
+          'image', // FastAPI의 파라미터 이름과 동일해야 함
+          imageBytes,
+          filename: 'eye.jpg',
+          contentType: MediaType('image', 'jpeg'),
+        ),
+      )
+      ..fields['note'] = _nameCtrl.text; // 선택사항: note로 이름 보내기
+
+    final streamed = await request.send();
+    final response = await http.Response.fromStream(streamed);
+
+    if (response.statusCode != 200) {
+      throw Exception('Backend error: ${response.statusCode}');
+    }
+    print('RAW BODY = ${response.body}');
+    final body = jsonDecode(response.body);
+    final data = body['data'];
+    final modelOutput = data?['model_output'];
+    
+    if (modelOutput is String) {
+      return modelOutput.trim(); // 마크다운 문자열이라고 가정
+    } else {
+      // 혹시 리스트/맵이면 적당히 문자열로 변환
+      return modelOutput.toString();
+    }
   }
 }
