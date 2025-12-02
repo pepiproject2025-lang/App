@@ -50,3 +50,6 @@ __pycache__/
 *.pyc
 app_backend/__pycache__/
 app_backend/*.pyc
+
+# 보안
+app_backend/.env

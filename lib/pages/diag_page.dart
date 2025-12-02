@@ -223,7 +223,7 @@ class _DiagPageState extends State<DiagPage> {
                       ),
                     ),
                   ),
-                )
+                ),
                 const SizedBox(height: 8),
               ],
             ),

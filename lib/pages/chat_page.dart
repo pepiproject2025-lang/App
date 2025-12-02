@@ -48,7 +48,7 @@ class _ChatPageState extends State<ChatPage> {
       // ★ 백엔드 주소 (PC에서 돌리는 FastAPI라면 보통 이런 식)
       // - 안드로이드 에뮬레이터: http://10.0.2.2:8000
       // - 아이폰 시뮬레이터 / 웹:   http://localhost:8000 또는 실제 IP
-      final uri = Uri.parse('http://10.0.2.2:8000/chat')
+      final uri = Uri.parse('http://localhost:8000/chat');
 
       final response = await http.post(
         uri,
@@ -115,10 +115,13 @@ class _ChatPageState extends State<ChatPage> {
                     IconButton(
                       icon: const Icon(Icons.arrow_back_ios_new, size: 26),
                       onPressed: () {
-                        Navigator.pushNamedAndRemoveUntil(
-                          context, '/result', (route) => false,
-                        );
+                        Navigator.pop(context);
                       },
+                      // onPressed: () {
+                      //   Navigator.pushNamedAndRemoveUntil(
+                      //     context, '/result', (route) => false,
+                      //   );
+                      // },
                     ),
                     Expanded(
                       child: Center(

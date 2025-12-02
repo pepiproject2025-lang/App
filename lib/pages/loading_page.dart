@@ -37,10 +37,10 @@ class _LoadingPageState extends State<LoadingPage>
     });
 
     // 3초 후 자동 종료 (결과 페이지로 이동할 거면 여기서 pushNamed)
-    Timer(const Duration(seconds: 5), () {
-      //if (mounted) Navigator.pop(context);
-      if (mounted) Navigator.pushNamed(context, '/result');
-    });
+  //   Timer(const Duration(seconds: 5), () {
+  //     //if (mounted) Navigator.pop(context);
+  //     if (mounted) Navigator.pushNamed(context, '/result');
+  //   });
   }
 
   @override
