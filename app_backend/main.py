@@ -3,6 +3,10 @@ from fastapi import FastAPI, File, UploadFile, Form
 from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 import os, base64, httpx, hashlib
+import asyncio
+from dotenv import load_dotenv
+load_dotenv()
+
 
 app = FastAPI(title="PET-I Backend (Full Inference Flow)")
 
@@ -15,6 +19,7 @@ RUNPOD_URL = f"https://api.runpod.ai/v2/{RUNPOD_ENDPOINT_ID}/runsync" if RUNPOD_
 ALLOWED_TYPES = {"image/jpeg", "image/png", "image/jpg", "image/webp", "application/octet-stream"}
 MAX_FILE_MB = 15
 MAX_FILE_BYTES = MAX_FILE_MB * 1024 * 1024
+print("RUNPOD_URL =", RUNPOD_URL)
 
 # ======== CORS =========
 app.add_middleware(
@@ -24,6 +29,27 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
+async def wait_for_runpod_result(job_id: str, headers: dict):
+    status_url = f"https://api.runpod.ai/v2/{RUNPOD_ENDPOINT_ID}/status/{job_id}"
+    
+    while True:
+        async with httpx.AsyncClient(timeout=30) as client:
+            res = await client.get(status_url, headers=headers)
+        
+        data = res.json()
+        status = data.get("status")
+        
+        if status == "COMPLETED":
+            return data.get("output")
+        elif status == "FAILED":
+            raise Exception(f"Runpod Job Failed: {data}")
+            
+        # 아직 진행 중이면 1초 대기 후 재시도
+        print(f"Job {job_id} is {status}... waiting.")
+        await asyncio.sleep(1)
+
 
 # ======== Health Check =========
 @app.get("/health")
@@ -133,7 +159,7 @@ async def predict(
 from pydantic import BaseModel
 
 class ChatRequest(BaseModel):
-    messages: str
+    message: str
 
 @app.post("/chat")
 async def chat(req: ChatRequest):
@@ -150,16 +176,29 @@ async def chat(req: ChatRequest):
         }
     }
 
+    headers = {"Authorization": f"Bearer {RUNPOD_API_KEY}"}
     async with httpx.AsyncClient(timeout=180) as client:
         res = await client.post(
             RUNPOD_URL,
             json=payload,
-            headers={"Authorization": f"Bearer {RUNPOD_API_KEY}"}
+            headers=headers
         )
 
     data = res.json()
-    text = data.get("output") or data.get("data") or data
-    # text 파싱해서 Flutter chat_page 로 넘기면 됨
+    if data.get("status") in ["IN_QUEUE", "IN_PROGRESS"]:
+        job_id = data.get("id")
+        # 폴링 함수 호출하여 완료될 때까지 대기
+        final_output = await wait_for_runpod_result(job_id, headers)
+        text = final_output
+        
+    # 2. 바로 결과가 왔다면 (COMPLETED 혹은 결과 json 직접 반환)
+    else:
+        text = data.get("output") or data.get("data") or data
+
+    # 결과 포맷팅 (output 필드 추출 등 필요 시 추가 처리)
+    if isinstance(text, dict) and "output" in text:
+        text = text["output"]
+
     return {"answer": text}
 
 @app.get("/")
