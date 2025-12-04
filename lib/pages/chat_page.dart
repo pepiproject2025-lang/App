@@ -24,6 +24,9 @@ class _ChatPageState extends State<ChatPage> {
 
   bool _botTyping = false;
 
+  String? _caseId;             
+  bool _caseIdInitialized = false;
+
   @override
   void dispose() {
     _controller.dispose();
@@ -36,29 +39,39 @@ class _ChatPageState extends State<ChatPage> {
     final trimmed = text.trim();
     if (trimmed.isEmpty) return;
 
+    if (_caseId == null) {
+      // caseId 없으면 요청을 보내도 의미가 없음
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('진단 정보(caseId)가 없습니다. 먼저 진단을 진행해 주세요.')),
+      );
+      return;
+    }
+
     setState(() {
       _messages.add(_Msg.fromMe(trimmed));
       _controller.clear();
       _botTyping = true;
     });
 
-    // 최신으로 스크롤
     _jumpToBottomSoon();
+
     try {
-      // ★ 백엔드 주소 (PC에서 돌리는 FastAPI라면 보통 이런 식)
-      // - 안드로이드 에뮬레이터: http://10.0.2.2:8000
-      // - 아이폰 시뮬레이터 / 웹:   http://localhost:8000 또는 실제 IP
       final uri = Uri.parse('http://localhost:8000/chat');
 
       final response = await http.post(
         uri,
         headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({'message': trimmed}),
+        body: jsonEncode({
+          'case_id': _caseId,       
+          'message': trimmed,
+          'answer_mode': 'brief',   // 추후 'detail'로 바꿀 수 있음
+        }),
       );
 
       if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
-        // main.py에서 return {"answer": text} 라고 했으니까
+        final decoded = jsonDecode(response.body);
+        final data = decoded['data'] ?? decoded;
+
         final botText = data['answer']?.toString() ?? '응답을 이해하지 못했어요.';
 
         if (!mounted) return;
@@ -101,6 +114,14 @@ class _ChatPageState extends State<ChatPage> {
 
   @override
   Widget build(BuildContext context) {
+    if (!_caseIdInitialized) {
+      final args = ModalRoute.of(context)?.settings.arguments;
+      if (args is Map && args['caseId'] is String) {
+        _caseId = args['caseId'] as String;
+        debugPrint('ChatPage received caseId = $_caseId');
+      }
+      _caseIdInitialized = true;
+    }
     return SafeArea(
       child: Center(
         child: ConstrainedBox(

@@ -19,8 +19,10 @@ class DiagResult extends StatelessWidget {
 
     final args = ModalRoute.of(context)?.settings.arguments;
     String markdown = kDummyMarkdown;
-    String petName = "나이 미입력";
+    String petName = "이름 미입력";
     Uint8List? imageBytes;
+    String? caseId;
+    dynamic diagnosis;
 
     if (args is Map){
       final argMd = args['markdown'] as String?;
@@ -35,6 +37,11 @@ class DiagResult extends StatelessWidget {
       if (argImageBytes != null) {
         imageBytes = argImageBytes;
       }
+      final argCaseId = args['caseId'] as String?;
+      if (argCaseId != null) {
+        caseId = argCaseId;
+      }
+      diagnosis = args['diagnosis'];
     } else if (args is String) {
       markdown = args;
     }
@@ -57,10 +64,22 @@ class DiagResult extends StatelessWidget {
                       icon: const Icon(Icons.home_outlined, color: Colors.black87, size: 27),
                       splashRadius: 22,
                       onPressed: () {
+                        if (case_id == null){
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text('진단 기록이 저장되지 않았습니다.'),
+                            ),
+                          );                         
+                          return; 
+                        }
                         Navigator.pushNamedAndRemoveUntil(
                           context,
                           '/start',
-                              (route) => false,
+                          (route) => false,
+                          arguments: {
+                            'caseId': caseId,
+                            'diagnosis': diagnosis,
+                          },
                         );
                       },
                     ),

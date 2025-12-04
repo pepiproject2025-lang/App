@@ -186,7 +186,10 @@ class _DiagPageState extends State<DiagPage> {
 
                       try {
                         // 2) 로딩 페이지가 떠 있는 동안 백엔드에 진단 요청
-                        final markdown = await _requestDiagnosis(imageBytes);
+                        final result = await _requestDiagnosis(imageBytes);
+                        final markdown  = result['markdown'] as String? ?? '';
+                        final caseId    = result['caseId'] as String?;
+                        final diagnosis = result['diagnosis'];
 
                         if (!context.mounted) return;
 
@@ -201,6 +204,8 @@ class _DiagPageState extends State<DiagPage> {
                             'markdown': markdown,
                             'name': petName,
                             'imageBytes': imageBytes,
+                            'caseId': caseId,
+                            'diagnosis': diagnosis,
                           },
                         );
                       } catch (e) {
@@ -234,22 +239,21 @@ class _DiagPageState extends State<DiagPage> {
 
   }
   // ✅ 백엔드 호출 함수
-  Future<String> _requestDiagnosis(Uint8List imageBytes) async {
-    // TODO: 실제 백엔드 주소로 변경
-    // - 웹에서 테스트: http://localhost:8000/predict
-    // - 안드로이드 에뮬레이터: http://10.0.2.2:8000/predict
+  Future<Map<String, dynamic>> _requestDiagnosis(Uint8List imageBytes) async {
+    // - 웹: http://localhost:8000/predict
+    // - 안드로이드 에뮬: http://10.0.2.2:8000/predict
     final uri = Uri.parse('http://localhost:8000/predict');
 
     final request = http.MultipartRequest('POST', uri)
       ..files.add(
         http.MultipartFile.fromBytes(
-          'image', // FastAPI의 파라미터 이름과 동일해야 함
+          'image',
           imageBytes,
           filename: 'eye.jpg',
           contentType: MediaType('image', 'jpeg'),
         ),
       )
-      ..fields['note'] = _nameCtrl.text; // 선택사항: note로 이름 보내기
+      ..fields['case_id'] = _nameCtrl.text; // 원하면 이름/유저ID로 case_id 지정도 가능
 
     final streamed = await request.send();
     final response = await http.Response.fromStream(streamed);
@@ -257,16 +261,19 @@ class _DiagPageState extends State<DiagPage> {
     if (response.statusCode != 200) {
       throw Exception('Backend error: ${response.statusCode}');
     }
+
     print('RAW BODY = ${response.body}');
     final body = jsonDecode(response.body);
-    final data = body['data'];
-    final modelOutput = data?['model_output'];
-    
-    if (modelOutput is String) {
-      return modelOutput.trim(); // 마크다운 문자열이라고 가정
-    } else {
-      // 혹시 리스트/맵이면 적당히 문자열로 변환
-      return modelOutput.toString();
-    }
+    final data = body['data'] ?? {};
+
+    final markdown   = (data['report_markdown'] ?? '') as String;
+    final caseId     = data['case_id'];
+    final diagnosis  = data['diagnosis'];
+
+    return {
+      'markdown': markdown.trim(),
+      'caseId': caseId,
+      'diagnosis': diagnosis,
+    };
   }
 }
