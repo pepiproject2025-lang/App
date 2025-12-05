@@ -5,6 +5,7 @@ import 'dart:typed_data';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:http_parser/http_parser.dart';
+import '../config.dart';
 
 
 class DiagPage extends StatefulWidget {
@@ -242,7 +243,7 @@ class _DiagPageState extends State<DiagPage> {
     // TODO: 실제 백엔드 주소로 변경
     // - 웹에서 테스트: http://localhost:8000/predict
     // - 안드로이드 에뮬레이터: http://10.0.2.2:8000/predict
-    final uri = Uri.parse('http://localhost:8000/predict');
+    final uri = Uri.parse('$baseUrl/predict');
 
     final request = http.MultipartRequest('POST', uri)
       ..files.add(

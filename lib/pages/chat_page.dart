@@ -5,6 +5,7 @@ import 'dart:typed_data'; // Uint8List
 import 'package:http/http.dart' as http;
 import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:google_fonts/google_fonts.dart'; 
+import '../config.dart'; 
 
 
 class ChatPage extends StatefulWidget {
@@ -70,7 +71,7 @@ class _ChatPageState extends State<ChatPage> {
       // ★ 백엔드 주소 (PC에서 돌리는 FastAPI라면 보통 이런 식)
       // - 안드로이드 에뮬레이터: http://10.0.2.2:8000
       // - 아이폰 시뮬레이터 / 웹:   http://localhost:8000 또는 실제 IP
-      final uri = Uri.parse('http://localhost:8000/chat');
+      final uri = Uri.parse('$baseUrl/chat');
 
       final response = await http.post(
         uri,
