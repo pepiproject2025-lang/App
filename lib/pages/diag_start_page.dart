@@ -30,22 +30,23 @@ class DiagStart extends StatelessWidget {
                   height: 50,
                   child: ElevatedButton(
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: Color(0xFF4A90E2),
+                      backgroundColor: const Color(0xFF4A90E2),
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(horizontal: 48, vertical: 16),
                       shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(8),
+                        borderRadius: BorderRadius.circular(30),
                       ),
-                      elevation: 0,
+                      elevation: 4,
+                      shadowColor: const Color(0xFF4A90E2).withOpacity(0.4),
                     ),
                     onPressed: () {
-                      debugPrint('시작하기 버튼 눌림');
-                      Navigator.pushNamed(context, '/diag');  // 프레임 위에서 라우트만 변경
+                      Navigator.pushNamed(context, '/diag');
                     },
                     child: const Text(
-                      '시작하기',
+                      '진단 시작하기',
                       style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.w600,
-                        color: Colors.white,
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
                       ),
                     ),
                   ),

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'diag_start_page.dart'; // '/start'에서 사용할 페이지
 import 'dart:typed_data';
 
@@ -37,6 +38,18 @@ class DiagResult extends StatelessWidget {
       }
     } else if (args is String) {
       markdown = args;
+    }
+
+    // 진단 정보 추출
+    Map<String, dynamic>? diagnosisData;
+    String? caseId;
+    if (args is Map) {
+      if (args['diagnosis'] != null) {
+        diagnosisData = args['diagnosis'] as Map<String, dynamic>;
+      }
+      if (args['case_id'] != null) {
+        caseId = args['case_id'] as String;
+      }
     }
 
 
@@ -103,10 +116,15 @@ class DiagResult extends StatelessWidget {
                 ),
                 const SizedBox(height: 24),
 
+                if (diagnosisData != null) ...[
+                  _buildDiagnosisCard(cardColor, primaryColor, textTheme, diagnosisData),
+                  const SizedBox(height: 24),
+                ],
+
                 _buildDetailsCard(cardColor, textTheme, markdown),
                 const SizedBox(height: 32),
 
-                _buildActionButtons(context),
+                _buildActionButtons(context, caseId, imageBytes),
                 const SizedBox(height: 20),
               ],
             ),
@@ -214,10 +232,21 @@ class DiagResult extends StatelessWidget {
         padding: const EdgeInsets.all(16.0),
         child: MarkdownBody(
           styleSheet: MarkdownStyleSheet(
-            h1: textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
-            h2: textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
-            p: textTheme.bodyMedium?.copyWith(height: 1.5),
-            listBullet: textTheme.bodyMedium,
+            h1: GoogleFonts.notoSansKr(
+              textStyle: textTheme.titleLarge,
+              fontWeight: FontWeight.bold,
+            ),
+            h2: GoogleFonts.notoSansKr(
+              textStyle: textTheme.titleMedium,
+              fontWeight: FontWeight.bold,
+            ),
+            p: GoogleFonts.notoSansKr(
+              textStyle: textTheme.bodyMedium,
+              height: 1.5,
+            ),
+            listBullet: GoogleFonts.notoSansKr(
+              textStyle: textTheme.bodyMedium,
+            ),
           ),
           data: markdown,
         ),
@@ -225,7 +254,7 @@ class DiagResult extends StatelessWidget {
     );
   }
 
-  Widget _buildActionButtons(BuildContext context) {
+  Widget _buildActionButtons(BuildContext context, String? caseId, Uint8List? imageBytes) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
@@ -235,17 +264,26 @@ class DiagResult extends StatelessWidget {
               backgroundColor: const Color(0xFF4A90E2),
               foregroundColor: Colors.white,
               shape: const StadiumBorder(),
-              padding: const EdgeInsets.symmetric(vertical: 8),
+              padding: const EdgeInsets.symmetric(vertical: 12),
+              elevation: 3,
+              shadowColor: const Color(0xFF4A90E2).withOpacity(0.4),
             ),
             onPressed: () {
-              Navigator.pushNamed(context, '/chatbot');
+              Navigator.pushNamed(
+                context, 
+                '/chatbot',
+                arguments: {
+                  'case_id': caseId,
+                  'imageBytes': imageBytes, // 이미지 전달
+                },
+              );
             },
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: const [
-                Icon(Icons.chat_bubble, size: 24),
+                Icon(Icons.chat_bubble_outline_rounded, size: 24),
                 SizedBox(height: 4),
-                Text('Chatbot과 상담하기', style: TextStyle(fontSize: 12)),
+                Text('AI 상담', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold)),
               ],
             ),
           ),
@@ -291,6 +329,79 @@ class DiagResult extends StatelessWidget {
           ),
         ),
       ],
+    );
+  }
+  Widget _buildDiagnosisCard(Color cardColor, Color primaryColor, TextTheme textTheme, Map<String, dynamic> diagnosisData) {
+    final String diagnosisName = diagnosisData['diagnosis'] ?? '진단명 없음';
+    final List<dynamic> symptoms = diagnosisData['symptoms'] ?? [];
+
+    return Card(
+      elevation: 2,
+      color: cardColor,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      child: Padding(
+        padding: const EdgeInsets.all(20.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(Icons.health_and_safety, color: primaryColor, size: 28),
+                const SizedBox(width: 10),
+                Text(
+                  'AI 진단 결과',
+                  style: textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.bold,
+                    color: Colors.black54,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+              decoration: BoxDecoration(
+                color: primaryColor.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: primaryColor.withOpacity(0.3)),
+              ),
+              child: Text(
+                diagnosisName,
+                style: GoogleFonts.notoSansKr(
+                  textStyle: textTheme.headlineSmall,
+                  fontWeight: FontWeight.bold,
+                  color: primaryColor,
+                ),
+                textAlign: TextAlign.center,
+              ),
+            ),
+            if (symptoms.isNotEmpty) ...[
+              const SizedBox(height: 20),
+              Text(
+                '주요 증상',
+                style: textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 10),
+              ...symptoms.map((s) => Padding(
+                padding: const EdgeInsets.only(bottom: 6.0),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text('• ', style: TextStyle(fontWeight: FontWeight.bold)),
+                    Expanded(
+                      child: Text(
+                        s.toString(),
+                        style: GoogleFonts.notoSansKr(height: 1.4),
+                      ),
+                    ),
+                  ],
+                ),
+              )),
+            ],
+          ],
+        ),
+      ),
     );
   }
 }

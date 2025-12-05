@@ -118,39 +118,43 @@ class _DiagPageState extends State<DiagPage> {
                 GestureDetector(
                   onTap: _pickImage, // ✅ image_picker 사용
                   child: Container(
+                    height: 250,
                     width: double.infinity,
-                    constraints: const BoxConstraints(minHeight: 220),
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
                     decoration: BoxDecoration(
                       color: Colors.white,
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(
-                        color: Colors.black.withOpacity(0.18),
-                        width: 1,
-                      ),
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(color: const Color(0xFFE0E0E0), width: 2),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.05),
+                          blurRadius: 10,
+                          offset: const Offset(0, 4),
+                        ),
+                      ],
                     ),
                     child: _pickedBytes == null
                         ? Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        const Icon(Icons.photo_camera_outlined, size: 50, color: Colors.black54),
-                        const SizedBox(height: 10),
-                        Text('안구 사진 업로드',
-                            style: TextStyle(fontSize: 14, color: Colors.black.withOpacity(0.65))),
-                        const SizedBox(height: 4),
-                        Text('클릭하여 선택 또는 촬영',
-                            style: TextStyle(fontSize: 12, color: Colors.black.withOpacity(0.45))),
-                      ],
-                    )
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.all(16),
+                                decoration: const BoxDecoration(
+                                  color: Color(0xFFF0F7FF),
+                                  shape: BoxShape.circle,
+                                ),
+                                child: const Icon(Icons.add_a_photo_rounded, size: 40, color: Color(0xFF4A90E2)),
+                              ),
+                              const SizedBox(height: 16),
+                              const Text(
+                                '사진을 업로드해주세요',
+                                style: TextStyle(color: Color(0xFF757575), fontSize: 16, fontWeight: FontWeight.w500),
+                              ),
+                            ],
+                          )
                         : ClipRRect(
-                      borderRadius: BorderRadius.circular(8),
-                      child: Image.memory(
-                        _pickedBytes!,
-                        fit: BoxFit.cover,
-                        height: 260,
-                        width: double.infinity,
-                      ),
-                    ),
+                            borderRadius: BorderRadius.circular(18),
+                            child: Image.memory(_pickedBytes!, fit: BoxFit.cover),
+                          ),
                   ),
                 ),
 
@@ -164,10 +168,12 @@ class _DiagPageState extends State<DiagPage> {
                   child: ElevatedButton(
                     style: ElevatedButton.styleFrom(
                       backgroundColor: const Color(0xFF4A90E2),
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 16),
                       shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(8),
+                        borderRadius: BorderRadius.circular(12),
                       ),
-                      elevation: 0,
+                      elevation: 2,
                     ),
                     onPressed: () async {
                       if (_pickedBytes == null) {
@@ -186,7 +192,7 @@ class _DiagPageState extends State<DiagPage> {
 
                       try {
                         // 2) 로딩 페이지가 떠 있는 동안 백엔드에 진단 요청
-                        final markdown = await _requestDiagnosis(imageBytes);
+                        final resultData = await _requestDiagnosis(imageBytes);
 
                         if (!context.mounted) return;
 
@@ -198,7 +204,9 @@ class _DiagPageState extends State<DiagPage> {
                           context,
                           '/result',
                           arguments: {
-                            'markdown': markdown,
+                            'markdown': resultData['model_output'],
+                            'diagnosis': resultData['diagnosis'],
+                            'case_id': resultData['case_id'],
                             'name': petName,
                             'imageBytes': imageBytes,
                           },
@@ -215,12 +223,8 @@ class _DiagPageState extends State<DiagPage> {
                       }
                     },
                     child: const Text(
-                      '진단하기',
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.w600,
-                        color: Colors.white,
-                      ),
+                      '진단 요청하기',
+                      style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                     ),
                   ),
                 ),
@@ -234,7 +238,7 @@ class _DiagPageState extends State<DiagPage> {
 
   }
   // ✅ 백엔드 호출 함수
-  Future<String> _requestDiagnosis(Uint8List imageBytes) async {
+  Future<Map<String, dynamic>> _requestDiagnosis(Uint8List imageBytes) async {
     // TODO: 실제 백엔드 주소로 변경
     // - 웹에서 테스트: http://localhost:8000/predict
     // - 안드로이드 에뮬레이터: http://10.0.2.2:8000/predict
@@ -261,12 +265,13 @@ class _DiagPageState extends State<DiagPage> {
     final body = jsonDecode(response.body);
     final data = body['data'];
     final modelOutput = data?['model_output'];
+    final diagnosis = data?['diagnosis'];
+    final caseId = data?['case_id'];
     
-    if (modelOutput is String) {
-      return modelOutput.trim(); // 마크다운 문자열이라고 가정
-    } else {
-      // 혹시 리스트/맵이면 적당히 문자열로 변환
-      return modelOutput.toString();
-    }
+    return {
+      'model_output': modelOutput?.toString().trim() ?? '',
+      'diagnosis': diagnosis, // Map or null
+      'case_id': caseId,
+    };
   }
 }

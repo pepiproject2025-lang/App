@@ -36,9 +36,9 @@ async def wait_for_runpod_result(job_id: str, headers: dict):
     
     while True:
         async with httpx.AsyncClient(timeout=30) as client:
-            res = await client.get(status_url, headers=headers)
-        
-        data = res.json()
+            response = await client.get(status_url, headers=headers)
+        print(f"DEBUG: RunPod response: {response.json()}")
+        data = response.json()
         status = data.get("status")
         
         if status == "COMPLETED":
@@ -135,8 +135,8 @@ async def predict(
             "upstream_status": response.status_code,
             "data": {
                 "model_output": model_output,
-                #"model_name": "runpod-handler",
-                #"model_version": "v1",
+                "diagnosis": raw_model_output.get("diagnosis") if isinstance(raw_model_output, dict) else None,
+                "case_id": raw_model_output.get("case_id") if isinstance(raw_model_output, dict) else None,
                 "image_hash": image_hash,
                 #"echo_note": note
             }
@@ -160,13 +160,19 @@ from pydantic import BaseModel
 
 class ChatRequest(BaseModel):
     message: str
+    case_id: str | None = None
+    image: str | None = None  # Base64 encoded image string
 
 @app.post("/chat")
 async def chat(req: ChatRequest):
+    # 이미지가 있으면 리스트에 추가
+    images_list = [req.image] if req.image else []
+    
     payload = {
         "input": {
             "prompt": req.message,
-            "images": [],   # 필요하면 나중에 이미지도 붙일 수 있음
+            "case_id": req.case_id,
+            "images": images_list,
             "gen": {
                 "max_new_tokens": 512,
                 "temperature": 0.2,
@@ -177,6 +183,7 @@ async def chat(req: ChatRequest):
     }
 
     headers = {"Authorization": f"Bearer {RUNPOD_API_KEY}"}
+    print(f"DEBUG: Sending payload to RunPod: {payload}")
     async with httpx.AsyncClient(timeout=180) as client:
         res = await client.post(
             RUNPOD_URL,
@@ -192,12 +199,27 @@ async def chat(req: ChatRequest):
         text = final_output
         
     # 2. 바로 결과가 왔다면 (COMPLETED 혹은 결과 json 직접 반환)
+    # 2. 바로 결과가 왔다면 (COMPLETED 혹은 결과 json 직접 반환)
     else:
+        # 에러 상태 체크
+        if data.get("status") == "FAILED":
+            print(f"DEBUG: RunPod Job Failed immediately: {data}")
+            return {"answer": "죄송합니다. 일시적인 오류로 답변을 생성할 수 없습니다. 잠시 후 다시 시도해주세요."}
+            
         text = data.get("output") or data.get("data") or data
 
     # 결과 포맷팅 (output 필드 추출 등 필요 시 추가 처리)
-    if isinstance(text, dict) and "output" in text:
-        text = text["output"]
+    if isinstance(text, dict):
+        if "output" in text:
+            text = text["output"]
+        elif "error" in text: # 에러 객체가 포함된 경우
+             print(f"DEBUG: RunPod returned error object: {text}")
+             return {"answer": "죄송합니다. 답변 생성 중 문제가 발생했습니다. 다시 질문해 주시겠어요?"}
+
+    # 만약 text가 여전히 dict라면 (위에서 처리가 안 된 경우) 문자열로 변환하거나 에러 메시지
+    if isinstance(text, dict):
+         print(f"DEBUG: Unexpected dict response: {text}")
+         return {"answer": "죄송합니다. 서버 응답을 처리하는 중 문제가 발생했습니다."}
 
     return {"answer": text}
 

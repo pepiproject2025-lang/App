@@ -1,7 +1,11 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'dart:convert';
-import 'package:http/http.dart' as http; 
+import 'dart:typed_data'; // Uint8List
+import 'package:http/http.dart' as http;
+import 'package:flutter_markdown/flutter_markdown.dart';
+import 'package:google_fonts/google_fonts.dart'; 
+
 
 class ChatPage extends StatefulWidget {
   const ChatPage({super.key});
@@ -23,6 +27,24 @@ class _ChatPageState extends State<ChatPage> {
   ];
 
   bool _botTyping = false;
+
+  String? _caseId;
+  String? _base64Image; // Base64 인코딩된 이미지 문자열
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final args = ModalRoute.of(context)?.settings.arguments;
+    if (args is Map) {
+      if (args['case_id'] != null) {
+        _caseId = args['case_id'] as String;
+      }
+      if (args['imageBytes'] != null) {
+        final bytes = args['imageBytes'] as Uint8List;
+        _base64Image = base64Encode(bytes);
+      }
+    }
+  }
 
   @override
   void dispose() {
@@ -53,7 +75,11 @@ class _ChatPageState extends State<ChatPage> {
       final response = await http.post(
         uri,
         headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({'message': trimmed}),
+        body: jsonEncode({
+          'message': trimmed,
+          'case_id': _caseId, // case_id 추가
+          'image': _base64Image, // 이미지 추가 (없으면 null)
+        }),
       );
 
       if (response.statusCode == 200) {
@@ -241,7 +267,20 @@ class _Bubble extends StatelessWidget {
             child: Column(
               crossAxisAlignment: align,
               children: [
-                Text(msg.text, style: TextStyle(color: fg, height: 1.4)),
+                MarkdownBody(
+                  data: msg.text,
+                  styleSheet: MarkdownStyleSheet(
+                    p: GoogleFonts.notoSansKr(
+                      color: fg,
+                      fontSize: 15,
+                      height: 1.4,
+                    ),
+                    strong: GoogleFonts.notoSansKr(
+                      color: fg,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
                 const SizedBox(height: 4),
                 Text(
                   msg.timeLabel,
