@@ -64,7 +64,7 @@ class DiagResult extends StatelessWidget {
                       icon: const Icon(Icons.home_outlined, color: Colors.black87, size: 27),
                       splashRadius: 22,
                       onPressed: () {
-                        if (case_id == null){
+                        if (caseId == null){
                           ScaffoldMessenger.of(context).showSnackBar(
                             const SnackBar(
                               content: Text('진단 기록이 저장되지 않았습니다.'),
@@ -125,7 +125,7 @@ class DiagResult extends StatelessWidget {
                 _buildDetailsCard(cardColor, textTheme, markdown),
                 const SizedBox(height: 32),
 
-                _buildActionButtons(context),
+                _buildActionButtons(context, caseId),
                 const SizedBox(height: 20),
               ],
             ),
@@ -244,7 +244,7 @@ class DiagResult extends StatelessWidget {
     );
   }
 
-  Widget _buildActionButtons(BuildContext context) {
+  Widget _buildActionButtons(BuildContext context, String? caseId) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
@@ -257,7 +257,17 @@ class DiagResult extends StatelessWidget {
               padding: const EdgeInsets.symmetric(vertical: 8),
             ),
             onPressed: () {
-              Navigator.pushNamed(context, '/chatbot');
+              if (caseId == null){
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('진단 기록이 저장되지 않았습니다.'),
+                  ),
+                );                         
+                return; 
+              }
+              Navigator.pushNamed(context, '/chatbot', arguments: {
+                'caseId': caseId,
+              });
             },
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,

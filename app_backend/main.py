@@ -14,6 +14,7 @@ load_dotenv()
 
 app = FastAPI(title="PET-I Backend")
 
+CASES: dict[str, dict] = {}
 # ======== 환경 변수 =========
 RUNPOD_ENDPOINT_ID = os.getenv("RUNPOD_ENDPOINT_ID", "")
 RUNPOD_API_KEY = os.getenv("RUNPOD_API_KEY", "")
@@ -159,13 +160,21 @@ async def predict(
     # 이미지 해시 (추적 용도)
     image_hash = hashlib.sha256(content).hexdigest()[:16]
 
+    case_id_key = case_id_resp or case_id or image_hash
+
+    if diagnosis is not None or report_md:
+        CASES[case_id_key] = {
+            "diagnosis": diagnosis,
+            "report_markdown": report_md,
+        }
+
     return {
         "status": "ok" if response.status_code == 200 else "runpod_error",
         "upstream_status": response.status_code,
         "data": {
             "report_markdown": report_md,
             "diagnosis": diagnosis,
-            "case_id": case_id_resp,
+            "case_id": case_id_key,
             "mode": mode,
             "image_hash": image_hash,
         },
@@ -204,6 +213,20 @@ async def chat(req: ChatRequest):
                 "message": "Runpod endpoint or API key is not configured.",
             },
         )
+    
+    case = CASES.get(req.case_id)
+    if not case:
+        return JSONResponse(
+            status_code=404,
+            content={
+                "status": "error",
+                "code": "CASE_NOT_FOUND",
+                "message": f"Case ID '{req.case_id}' not found.",
+            },
+        )
+    
+    diagnosis = case.get("diagnosis")
+    report_md = case.get("report_markdown")
 
     payload = {
         "input": {
@@ -211,6 +234,8 @@ async def chat(req: ChatRequest):
             "case_id": req.case_id,
             "question": req.message,
             "answer_mode": req.answer_mode or "brief",
+            "diagnosis": diagnosis,
+            "report_markdown": report_md,
         }
     }
 
