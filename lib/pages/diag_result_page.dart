@@ -1,13 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
-import 'package:google_fonts/google_fonts.dart';
-import 'diag_start_page.dart'; // '/start'에서 사용할 페이지
 import 'dart:typed_data';
 
 const String kDummyMarkdown = '''
-# ERROR: No Data
-## 진단 결과 데이터를 불러올 수 없습니다.
+# 분석 대기 중
+데이터를 불러오는 중이거나 분석 결과가 없습니다.
 ''';
+
 class DiagResult extends StatelessWidget {
   const DiagResult({super.key});
 
@@ -15,17 +14,24 @@ class DiagResult extends StatelessWidget {
   Widget build(BuildContext context) {
     final Color primaryColor = const Color(0xFF4A90E2);
     final Color cardColor = Colors.white;
-    final Color warningColor = const Color(0xFFFFF3E0);
+    // final Color warningColor = const Color(0xFFFFF3E0); // 경고문구 색상
     final TextTheme textTheme = Theme.of(context).textTheme;
 
     final args = ModalRoute.of(context)?.settings.arguments;
+    
+    // 데이터 변수 초기화
     String markdown = kDummyMarkdown;
-    String petName = "나이 미입력";
+    String petName = "이름 미입력";
     Uint8List? imageBytes;
+    String? caseId;
+    
+    // 🔹 진단명과 증상 파싱을 위한 변수
+    String? diagnosisTitle;
+    List<String> symptomsList = [];
 
-    if (args is Map){
+    if (args is Map) {
       final argMd = args['markdown'] as String?;
-      if (argMd != null) {
+      if (argMd != null && argMd.isNotEmpty) {
         markdown = argMd;
       }
       final argName = args['name'] as String?;
@@ -36,22 +42,24 @@ class DiagResult extends StatelessWidget {
       if (argImageBytes != null) {
         imageBytes = argImageBytes;
       }
+      final argCaseId = args['caseId'] as String?;
+      if (argCaseId != null) {
+        caseId = argCaseId;
+      }
+      
+      // 🔹 진단 결과 객체(JSON) 파싱
+      final diagData = args['diagnosis'];
+      if (diagData is Map) {
+        diagnosisTitle = diagData['diagnosis']?.toString();
+        if (diagData['symptoms'] is List) {
+          symptomsList = (diagData['symptoms'] as List)
+              .map((e) => e.toString())
+              .toList();
+        }
+      }
     } else if (args is String) {
       markdown = args;
     }
-
-    // 진단 정보 추출
-    Map<String, dynamic>? diagnosisData;
-    String? caseId;
-    if (args is Map) {
-      if (args['diagnosis'] != null) {
-        diagnosisData = args['diagnosis'] as Map<String, dynamic>;
-      }
-      if (args['case_id'] != null) {
-        caseId = args['case_id'] as String;
-      }
-    }
-
 
     return SafeArea(
       child: Center(
@@ -62,69 +70,44 @@ class DiagResult extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // 🔹 상단 홈 아이콘
-                Row(
-                  children: [
-                    // 왼쪽 홈 아이콘
-                    IconButton(
-                      icon: const Icon(Icons.home_outlined, color: Colors.black87, size: 27),
-                      splashRadius: 22,
-                      onPressed: () {
-                        Navigator.pushNamedAndRemoveUntil(
-                          context,
-                          '/start',
-                              (route) => false,
-                        );
-                      },
-                    ),
+                // 1. 상단 네비게이션 (홈 아이콘)
+                _buildTopBar(context, caseId, diagData: args is Map ? args['diagnosis'] : null),
 
-                    // 가운데 로고
-                    Expanded(
-                      child: Center(
-                        child: Image.asset(
-                          'assets/logo_img.png',
-                          height: 20,
-                        ),
-                      ),
-                    ),
-
-                    // 오른쪽 공간 확보 (아이콘과 균형 맞추기)
-                    const SizedBox(width: 48), // IconButton 크기만큼 맞춰줌
-                  ],
-                ),
-
-                const SizedBox(height: 16),
-
-                // 제목
-                Padding(
-                  padding: const EdgeInsets.only(bottom: 24.0),
-                  child: Text(
-                    'Diagnosis Result',
-                    style: textTheme.headlineMedium?.copyWith(fontWeight: FontWeight.bold),
-                  ),
-                ),
-
-                _buildWarningCard(warningColor),
                 const SizedBox(height: 24),
 
-                _buildResultSummaryCard(
-                  cardColor, 
-                  primaryColor, 
+                // 2. 이미지 & 이름 카드
+                _buildProfileCard(
+                  cardColor,
                   textTheme,
                   petName,
+                  caseId,
                   imageBytes,
                 ),
-                const SizedBox(height: 24),
+                
+                const SizedBox(height: 16),
 
-                if (diagnosisData != null) ...[
-                  _buildDiagnosisCard(cardColor, primaryColor, textTheme, diagnosisData),
-                  const SizedBox(height: 24),
-                ],
+                // 3. [핵심] 진단명 & 증상 요약 카드 (새로 추가된 부분)
+                if (diagnosisTitle != null) 
+                  _buildDiagnosisSummaryCard(cardColor, textTheme, diagnosisTitle, symptomsList),
 
+                // 진단명이 없는 경우(에러 등)에는 표시 안 함
+                if (diagnosisTitle != null)
+                  const SizedBox(height: 16),
+
+                // 4. 진단 보고서 (마크다운)
+                const Padding(
+                  padding: EdgeInsets.only(left: 4, bottom: 8),
+                  child: Text(
+                    '상세 리포트',
+                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.black54),
+                  ),
+                ),
                 _buildDetailsCard(cardColor, textTheme, markdown),
+                
                 const SizedBox(height: 32),
 
-                _buildActionButtons(context, caseId, imageBytes),
+                // 5. 하단 액션 버튼들
+                _buildActionButtons(context, caseId),
                 const SizedBox(height: 20),
               ],
             ),
@@ -134,72 +117,98 @@ class DiagResult extends StatelessWidget {
     );
   }
 
-  Widget _buildWarningCard(Color warningColor) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: warningColor,
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Row(
-        children: [
-          const Icon(Icons.warning_amber_rounded, color: Colors.orange),
-          const SizedBox(width: 12),
-          Flexible(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: const [
-                Text(
-                  'AI의 진단은 참고용이며, 정확하지 않을 수 있습니다.',
-                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
-                ),
-                SizedBox(height: 2),
-                Text(
-                  '정확한 진단은 반드시 수의사와 상담하세요.',
-                  style: TextStyle(fontSize: 12, color: Colors.black87),
-                ),
-              ],
+  // 상단 네비게이션 바
+  Widget _buildTopBar(BuildContext context, String? caseId, {dynamic diagData}) {
+    return Row(
+      children: [
+        IconButton(
+          icon: const Icon(Icons.home_outlined, color: Colors.black87, size: 28),
+          splashRadius: 22,
+          onPressed: () {
+            // 홈으로 갈 때 현재 진단 데이터를 넘겨줄지 여부 결정
+            if (caseId == null) {
+              Navigator.popUntil(context, ModalRoute.withName('/start'));
+            } else {
+              Navigator.pushNamedAndRemoveUntil(
+                context,
+                '/start',
+                (route) => false,
+                arguments: {
+                  'caseId': caseId,
+                  'diagnosis': diagData,
+                },
+              );
+            }
+          },
+        ),
+        Expanded(
+          child: Center(
+            child: Image.asset(
+              'assets/logo_img.png',
+              height: 20,
             ),
           ),
-        ],
-      ),
+        ),
+        const SizedBox(width: 48), // 아이콘 균형 맞추기
+      ],
     );
   }
 
-  Widget _buildResultSummaryCard(Color cardColor, Color primaryColor, TextTheme textTheme, String petName, Uint8List? imageBytes) {
+  // 1번 영역: 사진 + 이름 + CaseID
+  Widget _buildProfileCard(Color cardColor, TextTheme textTheme, String petName, String? caseId, Uint8List? imageBytes) {
     return Card(
-      elevation: 2,
+      elevation: 0, // 깔끔하게 그림자 제거 (원하시면 숫자를 높이세요)
       color: cardColor,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+        side: BorderSide(color: Colors.grey.shade200, width: 1), // 얇은 테두리
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // 이미지 영역
           ClipRRect(
             borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
             child: imageBytes != null
                 ? Image.memory(
                     imageBytes,
                     width: double.infinity,
-                    height: 200,
+                    height: 220, // 사진 높이 조금 키움
                     fit: BoxFit.cover,
                   )
                 : Container(
                     width: double.infinity,
-                    height: 200,
-                    color: Colors.grey[300],
-                    child: const Icon(Icons.image_not_supported, size: 80, color: Colors.white70),
+                    height: 220,
+                    color: Colors.grey[200],
+                    child: const Icon(Icons.pets, size: 60, color: Colors.grey),
                   ),
           ),
+          
+          // 텍스트 영역
           Padding(
             padding: const EdgeInsets.all(16),
             child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+              crossAxisAlignment: CrossAxisAlignment.start, // 좌측 정렬
               children: [
-                _buildInfoText(textTheme, '이름', petName),
-                // const SizedBox(height: 8),
-                // _buildInfoText(textTheme, '나이', '3살'),
-                // const SizedBox(height: 8),
-                // _buildInfoText(textTheme, '사용자', 'aaaa@gmail.com'),
+                Text(
+                  '반려동물 이름',
+                  style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  petName,
+                  style: textTheme.headlineSmall?.copyWith(
+                    fontWeight: FontWeight.bold,
+                    color: Colors.black87,
+                  ),
+                ),
+                if (caseId != null) ...[
+                  const SizedBox(height: 8),
+                  Text(
+                    'Case ID: $caseId',
+                    style: TextStyle(fontSize: 11, color: Colors.grey[400]),
+                  ),
+                ]
               ],
             ),
           ),
@@ -208,53 +217,111 @@ class DiagResult extends StatelessWidget {
     );
   }
 
-  Widget _buildInfoText(TextTheme textTheme, String title, String value) {
-    return Text.rich(
-      TextSpan(
-        style: textTheme.bodyMedium?.copyWith(fontSize: 15),
-        children: [
-          TextSpan(
-            text: '$title: ',
-            style: const TextStyle(fontWeight: FontWeight.bold),
+  // 2번 영역: 진단명 + 증상 리스트 (핵심)
+  Widget _buildDiagnosisSummaryCard(Color cardColor, TextTheme textTheme, String? title, List<String> symptoms) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: cardColor,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: const Color(0xFF4A90E2).withOpacity(0.3), width: 1.5), // 강조 테두리
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFF4A90E2).withOpacity(0.08),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
           ),
-          TextSpan(text: value),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start, // 좌측 정렬
+        children: [
+          const Text(
+            '진단 결과',
+            style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: Color(0xFF4A90E2)),
+          ),
+          const SizedBox(height: 6),
+          // 진단명 (크게)
+          Text(
+            title ?? '분석 중...',
+            style: textTheme.headlineMedium?.copyWith(
+              fontWeight: FontWeight.w800,
+              color: Colors.black87,
+              height: 1.2,
+            ),
+          ),
+          const SizedBox(height: 16),
+          
+          // 증상 리스트 (Divider로 구분)
+          if (symptoms.isNotEmpty) ...[
+            const Divider(height: 1, thickness: 1, color: Color(0xFFEEEEEE)),
+            const SizedBox(height: 16),
+            const Text(
+              '발견된 주요 증상',
+              style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: Colors.black54),
+            ),
+            const SizedBox(height: 10),
+            Wrap(
+              spacing: 8.0, // 가로 간격
+              runSpacing: 8.0, // 세로 간격
+              children: symptoms.map((symptom) {
+                return Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFF5F7FA), // 연한 회색 배경
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: Colors.grey.shade300),
+                  ),
+                  child: Text(
+                    symptom,
+                    style: const TextStyle(
+                      fontSize: 14,
+                      color: Colors.black87,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                );
+              }).toList(),
+            ),
+          ]
         ],
       ),
     );
   }
 
+  // 3번 영역: 마크다운 상세 보고서
   Widget _buildDetailsCard(Color cardColor, TextTheme textTheme, String markdown) {
     return Card(
-      elevation: 2,
+      elevation: 0,
       color: cardColor,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+        side: BorderSide(color: Colors.grey.shade200),
+      ),
       child: Padding(
-        padding: const EdgeInsets.all(16.0),
+        padding: const EdgeInsets.all(20.0),
         child: MarkdownBody(
-          styleSheet: MarkdownStyleSheet(
-            h1: GoogleFonts.notoSansKr(
-              textStyle: textTheme.titleLarge,
-              fontWeight: FontWeight.bold,
-            ),
-            h2: GoogleFonts.notoSansKr(
-              textStyle: textTheme.titleMedium,
-              fontWeight: FontWeight.bold,
-            ),
-            p: GoogleFonts.notoSansKr(
-              textStyle: textTheme.bodyMedium,
-              height: 1.5,
-            ),
-            listBullet: GoogleFonts.notoSansKr(
-              textStyle: textTheme.bodyMedium,
-            ),
-          ),
           data: markdown,
+          styleSheet: MarkdownStyleSheet(
+            // 텍스트 스타일 정의 (marginTop 삭제함)
+            h1: textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold, height: 1.5, color: Colors.black87),
+            h2: textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold, height: 1.5, color: Colors.black87),
+            p: textTheme.bodyMedium?.copyWith(height: 1.6, color: Colors.black87),
+            listBullet: textTheme.bodyMedium?.copyWith(color: Colors.black54),
+            strong: const TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF4A90E2)),
+            
+            // ✅ 여백은 여기서 설정해야 합니다
+            h2Padding: const EdgeInsets.only(top: 20, bottom: 8), 
+            pPadding: const EdgeInsets.only(bottom: 8),
+          ),
         ),
       ),
     );
   }
-
-  Widget _buildActionButtons(BuildContext context, String? caseId, Uint8List? imageBytes) {
+  
+  // 하단 버튼들
+  Widget _buildActionButtons(BuildContext context, String? caseId) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
@@ -263,145 +330,33 @@ class DiagResult extends StatelessWidget {
             style: ElevatedButton.styleFrom(
               backgroundColor: const Color(0xFF4A90E2),
               foregroundColor: Colors.white,
-              shape: const StadiumBorder(),
-              padding: const EdgeInsets.symmetric(vertical: 12),
-              elevation: 3,
-              shadowColor: const Color(0xFF4A90E2).withOpacity(0.4),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              padding: const EdgeInsets.symmetric(vertical: 14),
+              elevation: 2,
             ),
             onPressed: () {
-              Navigator.pushNamed(
-                context, 
-                '/chatbot',
-                arguments: {
-                  'case_id': caseId,
-                  'imageBytes': imageBytes, // 이미지 전달
-                },
-              );
+              if (caseId == null){
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('진단 기록이 저장되지 않았습니다.')),
+                );                         
+                return; 
+              }
+              Navigator.pushNamed(context, '/chatbot', arguments: {
+                'caseId': caseId,
+              });
             },
-            child: Column(
+            child: Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: const [
-                Icon(Icons.chat_bubble_outline_rounded, size: 24),
-                SizedBox(height: 4),
-                Text('AI 상담', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold)),
+                 Icon(Icons.chat_bubble_outline, size: 20),
+                 SizedBox(width: 8),
+                 Text('AI 상담하기', style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold)),
               ],
             ),
           ),
         ),
-        const SizedBox(width: 8),
-        Expanded(
-          child: ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFF2A5A9E),
-              foregroundColor: Colors.white,
-              shape: const StadiumBorder(),
-              padding: const EdgeInsets.symmetric(vertical: 8),
-            ),
-            onPressed: () {},
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: const [
-                Icon(Icons.medical_services, size: 24),
-                SizedBox(height: 4),
-                Text('수의사와 상담하기', textAlign: TextAlign.center, style: TextStyle(fontSize: 12)),
-              ],
-            ),
-          ),
-        ),
-        const SizedBox(width: 8),
-        Expanded(
-          child: ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFF6A99A8),
-              foregroundColor: Colors.white,
-              shape: const StadiumBorder(),
-              padding: const EdgeInsets.symmetric(vertical: 8),
-            ),
-            onPressed: () {},
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: const [
-                Icon(Icons.location_on, size: 24),
-                SizedBox(height: 4),
-                Text('동물병원 찾기', style: TextStyle(fontSize: 12)),
-              ],
-            ),
-          ),
-        ),
+        // 필요 시 다른 버튼 추가 (수의사 상담 등)
       ],
-    );
-  }
-  Widget _buildDiagnosisCard(Color cardColor, Color primaryColor, TextTheme textTheme, Map<String, dynamic> diagnosisData) {
-    final String diagnosisName = diagnosisData['diagnosis'] ?? '진단명 없음';
-    final List<dynamic> symptoms = diagnosisData['symptoms'] ?? [];
-
-    return Card(
-      elevation: 2,
-      color: cardColor,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      child: Padding(
-        padding: const EdgeInsets.all(20.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Icon(Icons.health_and_safety, color: primaryColor, size: 28),
-                const SizedBox(width: 10),
-                Text(
-                  'AI 진단 결과',
-                  style: textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.bold,
-                    color: Colors.black54,
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 16),
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
-              decoration: BoxDecoration(
-                color: primaryColor.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: primaryColor.withOpacity(0.3)),
-              ),
-              child: Text(
-                diagnosisName,
-                style: GoogleFonts.notoSansKr(
-                  textStyle: textTheme.headlineSmall,
-                  fontWeight: FontWeight.bold,
-                  color: primaryColor,
-                ),
-                textAlign: TextAlign.center,
-              ),
-            ),
-            if (symptoms.isNotEmpty) ...[
-              const SizedBox(height: 20),
-              Text(
-                '주요 증상',
-                style: textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
-              ),
-              const SizedBox(height: 10),
-              ...symptoms.map((s) => Padding(
-                padding: const EdgeInsets.only(bottom: 6.0),
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text('• ', style: TextStyle(fontWeight: FontWeight.bold)),
-                    Expanded(
-                      child: Text(
-                        s.toString(),
-                        style: GoogleFonts.notoSansKr(height: 1.4),
-                      ),
-                    ),
-                  ],
-                ),
-              )),
-            ],
-          ],
-        ),
-      ),
     );
   }
 }
