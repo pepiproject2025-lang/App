@@ -1,11 +1,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'dart:convert';
-import 'dart:typed_data'; // Uint8List
-import 'package:http/http.dart' as http;
-import 'package:flutter_markdown/flutter_markdown.dart';
-import 'package:google_fonts/google_fonts.dart'; 
-
+import 'package:http/http.dart' as http; 
 
 class ChatPage extends StatefulWidget {
   const ChatPage({super.key});
@@ -266,20 +262,7 @@ class _Bubble extends StatelessWidget {
             child: Column(
               crossAxisAlignment: align,
               children: [
-                MarkdownBody(
-                  data: msg.text,
-                  styleSheet: MarkdownStyleSheet(
-                    p: GoogleFonts.notoSansKr(
-                      color: fg,
-                      fontSize: 15,
-                      height: 1.4,
-                    ),
-                    strong: GoogleFonts.notoSansKr(
-                      color: fg,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ),
+                Text(msg.text, style: TextStyle(color: fg, height: 1.4)),
                 const SizedBox(height: 4),
                 Text(
                   msg.timeLabel,
