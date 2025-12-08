@@ -1,16 +1,7 @@
-# learn_flutter
+# PETI 안구 진단 프로젝트
 
-A new Flutter project.
+프론트엔드: **Flutter**기반
+  시작 페이지, 진단 페이지, 진단 결과페이지, 채팅페이지, 로딩페이지 5개로 이루어짐
 
-## Getting Started
-
-This project is a starting point for a Flutter application.
-
-A few resources to get you started if this is your first Flutter project:
-
-- [Lab: Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Cookbook: Useful Flutter samples](https://docs.flutter.dev/cookbook)
-
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+벡엔드: **FastAPI**기반 
+  pridict, chat 2가지를 구분해 서버리스 핸들러로 요청을 보내고 핸들러에서 주는 답변을 프론트엔드로 넘겨 줌
