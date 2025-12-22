@@ -19,8 +19,9 @@ class DiagStart extends StatelessWidget {
               Image.asset('assets/dog_cat.png', width: 420),
               const SizedBox(height: 20),
               const Text(
-                '반려동물 케어',
-                style: TextStyle(fontSize: 20, fontWeight: FontWeight.w600),
+                '우리 아이 눈 건강,\nAI로 간편하게 체크해보세요',
+                textAlign: TextAlign.center,
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.w400, height: 1.4),
               ),
               const SizedBox(height: 40),
               Padding(
@@ -46,7 +47,7 @@ class DiagStart extends StatelessWidget {
                       '진단 시작하기',
                       style: TextStyle(
                         fontSize: 20,
-                        fontWeight: FontWeight.bold,
+                        fontWeight: FontWeight.w600, // Slightly lighter bold for Jua
                       ),
                     ),
                   ),

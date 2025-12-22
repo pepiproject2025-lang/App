@@ -20,26 +20,59 @@ class MyApp extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
         useMaterial3: true,
+        fontFamily: GoogleFonts.jua().fontFamily,
+        textTheme: GoogleFonts.juaTextTheme(),
         colorScheme: ColorScheme.fromSeed(
-          seedColor: const Color(0xFF4A90E2),
-          background: const Color(0xFFFFFBF4),
+          seedColor: const Color(0xFF2E7D32), // Deep Green
+          background: const Color(0xFFFFFBF4), // Warm Beige
+          primary: const Color(0xFF2E7D32),
+          secondary: const Color(0xFFFFCC80), // Soft Orange accent
         ),
-        textTheme: GoogleFonts.notoSansKrTextTheme(),
+        scaffoldBackgroundColor: const Color(0xFFFFFBF4),
+        
+        // 1. Buttons: Rounded & Soft
         elevatedButtonTheme: ElevatedButtonThemeData(
           style: ElevatedButton.styleFrom(
-            elevation: 2,
+            elevation: 0,
+            backgroundColor: const Color(0xFF2E7D32),
+            foregroundColor: Colors.white,
             shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: BorderRadius.circular(20),
             ),
-            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+            textStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
           ),
         ),
+
+        // 2. Cards: No default shadow, just clean rounded white
         cardTheme: CardThemeData(
-          elevation: 2,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
-          ),
+          elevation: 0,
           color: Colors.white,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+            side: BorderSide(color: Colors.black.withOpacity(0.05)),
+          ),
+          margin: EdgeInsets.zero,
+        ),
+
+        // 3. Inputs: Global outline style
+        inputDecorationTheme: InputDecorationTheme(
+          filled: true,
+          fillColor: Colors.white,
+          contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(16),
+            borderSide: BorderSide(color: Colors.black.withOpacity(0.1)),
+          ),
+          enabledBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(16),
+            borderSide: BorderSide(color: Colors.black.withOpacity(0.1)),
+          ),
+          focusedBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(16),
+            borderSide: const BorderSide(color: Color(0xFF2E7D32), width: 1.5),
+          ),
+          hintStyle: TextStyle(color: Colors.grey.withOpacity(0.6), fontSize: 14),
         ),
       ),
 

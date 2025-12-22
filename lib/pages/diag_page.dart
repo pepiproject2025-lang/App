@@ -41,25 +41,7 @@ class _DiagPageState extends State<DiagPage> {
     super.dispose();
   }
 
-  InputDecoration _inputDecoration() => InputDecoration(
-    isDense: true,
-    filled: true,
-    fillColor: Colors.white,
-    hintText: '',
-    contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
-    border: OutlineInputBorder(
-      borderRadius: BorderRadius.circular(10),
-      borderSide: BorderSide(color: Colors.black.withOpacity(0.15), width: 1),
-    ),
-    enabledBorder: OutlineInputBorder(
-      borderRadius: BorderRadius.circular(10),
-      borderSide: BorderSide(color: Colors.black.withOpacity(0.15), width: 1),
-    ),
-    focusedBorder: OutlineInputBorder(
-      borderRadius: BorderRadius.circular(10),
-      borderSide: const BorderSide(color: Color(0xFF4A90E2), width: 1.2),
-    ),
-  );
+  // _inputDecoration removed to use Global Theme
 
   @override
   Widget build(BuildContext context) {
@@ -99,10 +81,10 @@ class _DiagPageState extends State<DiagPage> {
 
                 const Text('이름', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600)),
                 const SizedBox(height: 8),
-                TextFormField(
-                  controller: _nameCtrl,
-                  decoration: _inputDecoration().copyWith(hintText: '이름을 입력하세요'),
-                ),
+                  TextFormField(
+                    controller: _nameCtrl,
+                    decoration: const InputDecoration(hintText: '이름을 입력하세요'),
+                  ),
                 const SizedBox(height: 18),
 
                 // const Text('나이', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600)),
@@ -114,45 +96,61 @@ class _DiagPageState extends State<DiagPage> {
                 // ),
                 // const SizedBox(height: 22),
 
+                const SizedBox(height: 24),
+                const Text('안구 사진', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600)),
+                const SizedBox(height: 8),
+
                 // 업로드 박스
-                GestureDetector(
-                  onTap: _pickImage, // ✅ image_picker 사용
-                  child: Container(
-                    width: double.infinity,
-                    constraints: const BoxConstraints(minHeight: 220),
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(
-                        color: Colors.black.withOpacity(0.18),
-                        width: 1,
+                  GestureDetector(
+                    onTap: _pickImage,
+                    child: Container(
+                      width: double.infinity,
+                      constraints: const BoxConstraints(minHeight: 220),
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(20),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.05),
+                            blurRadius: 20,
+                            offset: const Offset(0, 4),
+                          ),
+                        ],
                       ),
-                    ),
-                    child: _pickedBytes == null
-                        ? Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        const Icon(Icons.photo_camera_outlined, size: 50, color: Colors.black54),
-                        const SizedBox(height: 10),
-                        Text('안구 사진 업로드',
-                            style: TextStyle(fontSize: 14, color: Colors.black.withOpacity(0.65))),
-                        const SizedBox(height: 4),
-                        Text('클릭하여 선택 또는 촬영',
-                            style: TextStyle(fontSize: 12, color: Colors.black.withOpacity(0.45))),
-                      ],
-                    )
-                        : ClipRRect(
-                      borderRadius: BorderRadius.circular(8),
-                      child: Image.memory(
-                        _pickedBytes!,
-                        fit: BoxFit.cover,
-                        height: 260,
-                        width: double.infinity,
-                      ),
+                      child: _pickedBytes == null
+                          ? Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(Icons.photo_camera_rounded, size: 50, color: Theme.of(context).primaryColor.withOpacity(0.5)),
+                                const SizedBox(height: 10),
+                                Text(
+                                  '안구 사진 업로드',
+                                  style: TextStyle(
+                                    fontSize: 16, // Slightly larger
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.black.withOpacity(0.7),
+                                  ),
+                                ),
+                                const SizedBox(height: 6),
+                                Text(
+                                  '질환이 의심되는 눈 사진을\n정면에서 선명하게 찍어 올려주세요!',
+                                  textAlign: TextAlign.center,
+                                  style: TextStyle(fontSize: 14, color: Theme.of(context).primaryColor, height: 1.4, fontWeight: FontWeight.w500),
+                                ),
+                              ],
+                            )
+                          : ClipRRect(
+                              borderRadius: BorderRadius.circular(12),
+                              child: Image.memory(
+                                _pickedBytes!,
+                                fit: BoxFit.cover,
+                                height: 260,
+                                width: double.infinity,
+                              ),
+                            ),
                     ),
                   ),
-                ),
 
                 const SizedBox(height: 24),
                 const SizedBox(height: 30),
@@ -163,11 +161,7 @@ class _DiagPageState extends State<DiagPage> {
                   height: 52,
                   child: ElevatedButton(
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF4A90E2),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      elevation: 0,
+                      padding: const EdgeInsets.symmetric(vertical: 16),
                     ),
                     onPressed: () async {
                       if (_pickedBytes == null) {

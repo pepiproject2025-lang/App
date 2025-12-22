@@ -73,6 +73,31 @@ class DiagResult extends StatelessWidget {
                 // 1. 상단 네비게이션 (홈 아이콘)
                 _buildTopBar(context, caseId, diagData: args is Map ? args['diagnosis'] : null),
 
+                const SizedBox(height: 16),
+                
+                // ⚠️ 주의사항 (Disclaimer)
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFFFF3E0), // Orange/Yellow tint
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: const Color(0xFFFFE0B2)),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(Icons.warning_amber_rounded, color: Colors.orange[800], size: 20),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          'AI 진단 결과는 참고용입니다.\n정확한 진단은 반드시 동물병원에 방문하세요.',
+                          style: TextStyle(fontSize: 13, color: Colors.orange[900], fontWeight: FontWeight.w500, height: 1.3),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+
                 const SizedBox(height: 24),
 
                 // 2. 이미지 & 이름 카드
@@ -88,7 +113,7 @@ class DiagResult extends StatelessWidget {
 
                 // 3. [핵심] 진단명 & 증상 요약 카드 (새로 추가된 부분)
                 if (diagnosisTitle != null) 
-                  _buildDiagnosisSummaryCard(cardColor, textTheme, diagnosisTitle, symptomsList),
+                  _buildDiagnosisSummaryCard(context, cardColor, textTheme, diagnosisTitle, symptomsList),
 
                 // 진단명이 없는 경우(에러 등)에는 표시 안 함
                 if (diagnosisTitle != null)
@@ -156,57 +181,70 @@ class DiagResult extends StatelessWidget {
 
   // 1번 영역: 사진 + 이름 + CaseID
   Widget _buildProfileCard(Color cardColor, TextTheme textTheme, String petName, String? caseId, Uint8List? imageBytes) {
-    return Card(
-      elevation: 0, // 깔끔하게 그림자 제거 (원하시면 숫자를 높이세요)
-      color: cardColor,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16),
-        side: BorderSide(color: Colors.grey.shade200, width: 1), // 얇은 테두리
+    return Container(
+      decoration: BoxDecoration(
+        color: cardColor,
+        borderRadius: BorderRadius.circular(24),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.06),
+            blurRadius: 24,
+            offset: const Offset(0, 8),
+          ),
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           // 이미지 영역
           ClipRRect(
-            borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
             child: imageBytes != null
                 ? Image.memory(
                     imageBytes,
                     width: double.infinity,
-                    height: 220, // 사진 높이 조금 키움
+                    height: 240,
                     fit: BoxFit.cover,
                   )
                 : Container(
                     width: double.infinity,
-                    height: 220,
-                    color: Colors.grey[200],
-                    child: const Icon(Icons.pets, size: 60, color: Colors.grey),
+                    height: 240,
+                    color: Colors.grey[100],
+                    child: Icon(Icons.pets, size: 60, color: Colors.grey[300]),
                   ),
           ),
           
           // 텍스트 영역
           Padding(
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.all(24),
             child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start, // 좌측 정렬
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
                   '반려동물 이름',
-                  style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+                  style: TextStyle(fontSize: 13, color: Colors.grey[600], fontWeight: FontWeight.w500),
                 ),
-                const SizedBox(height: 4),
+                const SizedBox(height: 6),
                 Text(
                   petName,
                   style: textTheme.headlineSmall?.copyWith(
                     fontWeight: FontWeight.bold,
                     color: Colors.black87,
+                    fontSize: 26,
                   ),
                 ),
                 if (caseId != null) ...[
-                  const SizedBox(height: 8),
-                  Text(
-                    'Case ID: $caseId',
-                    style: TextStyle(fontSize: 11, color: Colors.grey[400]),
+                  const SizedBox(height: 12),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: Colors.grey[100],
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Text(
+                      'Case ID: $caseId',
+                      style: TextStyle(fontSize: 12, color: Colors.grey[500], fontFamily: 'monospace'),
+                    ),
                   ),
                 ]
               ],
@@ -218,67 +256,67 @@ class DiagResult extends StatelessWidget {
   }
 
   // 2번 영역: 진단명 + 증상 리스트 (핵심)
-  Widget _buildDiagnosisSummaryCard(Color cardColor, TextTheme textTheme, String? title, List<String> symptoms) {
+  Widget _buildDiagnosisSummaryCard(BuildContext context, Color cardColor, TextTheme textTheme, String? title, List<String> symptoms) {
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
         color: cardColor,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0xFF4A90E2).withOpacity(0.3), width: 1.5), // 강조 테두리
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: const Color(0xFF2E7D32).withOpacity(0.15), width: 1.5), // Subtle Green Border
         boxShadow: [
           BoxShadow(
-            color: const Color(0xFF4A90E2).withOpacity(0.08),
-            blurRadius: 12,
-            offset: const Offset(0, 4),
+            color: const Color(0xFF2E7D32).withOpacity(0.08),
+            blurRadius: 20,
+            offset: const Offset(0, 8),
           ),
         ],
       ),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start, // 좌측 정렬
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            '진단 결과',
-            style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: Color(0xFF4A90E2)),
+          Row(
+            children: [
+              Icon(Icons.health_and_safety_rounded, color: Theme.of(context).primaryColor, size: 24),
+              const SizedBox(width: 8),
+              Text(
+                '진단 결과',
+                style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Theme.of(context).primaryColor),
+              ),
+            ],
           ),
-          const SizedBox(height: 6),
+          const SizedBox(height: 12),
           // 진단명 (크게)
           Text(
             title ?? '분석 중...',
             style: textTheme.headlineMedium?.copyWith(
-              fontWeight: FontWeight.w800,
+              fontWeight: FontWeight.w900,
               color: Colors.black87,
               height: 1.2,
+              fontSize: 28,
             ),
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 20),
           
-          // 증상 리스트 (Divider로 구분)
+          // 증상 리스트
           if (symptoms.isNotEmpty) ...[
-            const Divider(height: 1, thickness: 1, color: Color(0xFFEEEEEE)),
-            const SizedBox(height: 16),
-            const Text(
-              '발견된 주요 증상',
-              style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: Colors.black54),
-            ),
-            const SizedBox(height: 10),
             Wrap(
-              spacing: 8.0, // 가로 간격
-              runSpacing: 8.0, // 세로 간격
+              spacing: 8.0, 
+              runSpacing: 8.0, 
               children: symptoms.map((symptom) {
                 return Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
                   decoration: BoxDecoration(
-                    color: const Color(0xFFF5F7FA), // 연한 회색 배경
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: Colors.grey.shade300),
+                    color: const Color(0xFFE8F5E9), // Very Light Green
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(color: const Color(0xFFC8E6C9)),
                   ),
                   child: Text(
                     symptom,
                     style: const TextStyle(
                       fontSize: 14,
-                      color: Colors.black87,
-                      fontWeight: FontWeight.w500,
+                      color: Color(0xFF2E7D32),
+                      fontWeight: FontWeight.w600,
                     ),
                   ),
                 );
@@ -292,29 +330,37 @@ class DiagResult extends StatelessWidget {
 
   // 3번 영역: 마크다운 상세 보고서
   Widget _buildDetailsCard(Color cardColor, TextTheme textTheme, String markdown) {
-    return Card(
-      elevation: 0,
-      color: cardColor,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16),
-        side: BorderSide(color: Colors.grey.shade200),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(20.0),
-        child: MarkdownBody(
-          data: markdown,
-          styleSheet: MarkdownStyleSheet(
-            // 텍스트 스타일 정의 (marginTop 삭제함)
-            h1: textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold, height: 1.5, color: Colors.black87),
-            h2: textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold, height: 1.5, color: Colors.black87),
-            p: textTheme.bodyMedium?.copyWith(height: 1.6, color: Colors.black87),
-            listBullet: textTheme.bodyMedium?.copyWith(color: Colors.black54),
-            strong: const TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF4A90E2)),
-            
-            // ✅ 여백은 여기서 설정해야 합니다
-            h2Padding: const EdgeInsets.only(top: 20, bottom: 8), 
-            pPadding: const EdgeInsets.only(bottom: 8),
+    return Container(
+      decoration: BoxDecoration(
+        color: cardColor,
+        borderRadius: BorderRadius.circular(24),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.06),
+            blurRadius: 24,
+            offset: const Offset(0, 8),
           ),
+        ],
+      ),
+      padding: const EdgeInsets.all(24.0),
+      child: MarkdownBody(
+        data: markdown,
+        styleSheet: MarkdownStyleSheet(
+          // 텍스트 스타일 정의
+          h1: textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold, height: 1.5, color: Colors.black87, fontSize: 22),
+          h2: textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold, height: 1.6, color: Colors.black87, fontSize: 19),
+          p: textTheme.bodyMedium?.copyWith(height: 1.8, color: Colors.black87, fontSize: 16),
+          listBullet: textTheme.bodyMedium?.copyWith(color: Colors.black54),
+          
+          // ✅ 링크 색상 변경 (기존 Blue -> Secondary or Primary)
+          a: const TextStyle(color: Color(0xFF2E7D32), fontWeight: FontWeight.bold, decoration: TextDecoration.underline),
+          
+          // 강조 텍스트 (Deep Green)
+          strong: const TextStyle(fontWeight: FontWeight.w700, color: Color(0xFF2E7D32)),
+          
+          blockSpacing: 16,
+          h2Padding: const EdgeInsets.only(top: 24, bottom: 12), 
+          pPadding: const EdgeInsets.only(bottom: 12),
         ),
       ),
     );

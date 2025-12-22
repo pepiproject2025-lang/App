@@ -11,7 +11,7 @@ class ChatPage extends StatefulWidget {
 }
 
 class _ChatPageState extends State<ChatPage> {
-  static const Color kPrimary = Color(0xFF4A90E2);
+  static const Color kPrimary = Color(0xFF2E7D32);
   static const double kMaxWidth = 640;
 
   final _controller = TextEditingController();
@@ -230,7 +230,7 @@ class _Bubble extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isMe = msg.isMe;
-    final bg = isMe ? const Color(0xFF4A90E2) : Colors.white;
+    final bg = isMe ? const Color(0xFF2E7D32) : Colors.white; // Deep Green for me
     final fg = isMe ? Colors.white : Colors.black87;
     final align = isMe ? CrossAxisAlignment.end : CrossAxisAlignment.start;
 
@@ -240,35 +240,34 @@ class _Bubble extends StatelessWidget {
       children: [
         Flexible(
           child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+            margin: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
             decoration: BoxDecoration(
               color: bg,
               borderRadius: BorderRadius.only(
-                topLeft: const Radius.circular(14),
-                topRight: const Radius.circular(14),
-                bottomLeft: Radius.circular(isMe ? 14 : 4),
-                bottomRight: Radius.circular(isMe ? 4 : 14),
+                topLeft: const Radius.circular(20),
+                topRight: const Radius.circular(20),
+                bottomLeft: Radius.circular(isMe ? 20 : 4),
+                bottomRight: Radius.circular(isMe ? 4 : 20),
               ),
-              boxShadow: isMe
-                  ? []
-                  : [
+              boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withOpacity(0.06),
-                  blurRadius: 10,
-                  offset: const Offset(0, 4),
+                  color: Colors.black.withOpacity(0.04),
+                  blurRadius: 8,
+                  offset: const Offset(0, 2),
                 ),
               ],
             ),
             child: Column(
               crossAxisAlignment: align,
               children: [
-                Text(msg.text, style: TextStyle(color: fg, height: 1.4)),
+                Text(msg.text, style: TextStyle(color: fg, height: 1.4, fontSize: 15)),
                 const SizedBox(height: 4),
                 Text(
                   msg.timeLabel,
                   style: TextStyle(
                     color: fg.withOpacity(0.7),
-                    fontSize: 11,
+                    fontSize: 10,
                   ),
                 ),
               ],
@@ -308,36 +307,39 @@ class _TypingBubbleState extends State<_TypingBubble>
 
   @override
   Widget build(BuildContext context) {
-    return Align(
-      alignment: Alignment.centerLeft,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: const BorderRadius.only(
-            topLeft: Radius.circular(14),
-            topRight: Radius.circular(14),
-            bottomRight: Radius.circular(14),
-            bottomLeft: Radius.circular(4),
-          ),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.06),
-              blurRadius: 10,
-              offset: const Offset(0, 4),
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.start,
+      children: [
+        Container(
+          margin: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: const BorderRadius.only(
+              topLeft: Radius.circular(20),
+              topRight: Radius.circular(20),
+              bottomRight: Radius.circular(20),
+              bottomLeft: Radius.circular(4),
             ),
-          ],
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.06),
+                blurRadius: 10,
+                offset: const Offset(0, 4),
+              ),
+            ],
+          ),
+          child: AnimatedBuilder(
+            animation: _ctrl,
+            builder: (_, __) {
+              final t = _ctrl.value; // 0..1
+              int dots = 1 + (t * 3).floor() % 3;
+              return Text('AI가 생각하고 있어요' + '.' * dots,
+                  style: const TextStyle(color: Colors.black87, fontSize: 15));
+            },
+          ),
         ),
-        child: AnimatedBuilder(
-          animation: _ctrl,
-          builder: (_, __) {
-            final t = _ctrl.value; // 0..1
-            int dots = 1 + (t * 3).floor() % 3;
-            return Text('상담사가 입력 중' + '.' * dots,
-                style: const TextStyle(color: Colors.black87));
-          },
-        ),
-      ),
+      ],
     );
   }
 }
@@ -355,46 +357,52 @@ class _InputBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.only(top: 8, bottom: 6),
+    return Container(
+      margin: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(30),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.08),
+            blurRadius: 20,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
       child: Row(
         children: [
           Expanded(
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 14),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(22),
-                border: Border.all(color: Colors.black.withOpacity(0.1)),
-              ),
-              child: TextField(
-                controller: controller,
-                focusNode: focusNode,
-                minLines: 1,
-                maxLines: 5,
-                textInputAction: TextInputAction.send,
-                onSubmitted: onSend,
-                decoration: const InputDecoration(
-                  hintText: '메시지를 입력하세요',
-                  border: InputBorder.none,
-                ),
+            child: TextField(
+              controller: controller,
+              focusNode: focusNode,
+              minLines: 1,
+              maxLines: 5,
+              textInputAction: TextInputAction.send,
+              onSubmitted: onSend,
+              decoration: const InputDecoration(
+                hintText: '무엇이든 물어보세요...',
+                border: InputBorder.none,
+                enabledBorder: InputBorder.none,
+                focusedBorder: InputBorder.none,
+                contentPadding: EdgeInsets.symmetric(vertical: 10),
               ),
             ),
           ),
           const SizedBox(width: 8),
-          SizedBox(
-            height: 44,
-            width: 44,
-            child: ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: _ChatPageState.kPrimary,
-                elevation: 0,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(22),
-                ),
-              ),
+          Container(
+            height: 40,
+            width: 40,
+            decoration: BoxDecoration(
+              color: const Color(0xFF2E7D32),
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: IconButton(
+              icon: const Icon(Icons.arrow_upward_rounded, size: 20, color: Colors.white),
               onPressed: () => onSend(controller.text),
-              child: const Icon(Icons.send, size: 18, color: Colors.white),
+              padding: EdgeInsets.zero,
+              constraints: const BoxConstraints(),
             ),
           ),
         ],
@@ -416,22 +424,29 @@ class _SuggestionChips extends StatelessWidget {
     ];
     return SingleChildScrollView(
       scrollDirection: Axis.horizontal,
+      padding: const EdgeInsets.symmetric(horizontal: 4),
       child: Row(
-        children: [
-          const SizedBox(width: 4),
-          for (final s in items) ...[
-            ActionChip(
+        children: items.map((s) {
+          return Padding(
+            padding: const EdgeInsets.only(right: 8),
+            child: ActionChip(
               label: Text(s),
-              onPressed: () => onPick(s),
-              backgroundColor: Colors.white,
-              side: BorderSide(color: Colors.black.withOpacity(0.08)),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(999),
+              labelStyle: const TextStyle(
+                color: Color(0xFF2E7D32),
+                fontWeight: FontWeight.w600,
+                fontSize: 13,
               ),
+              backgroundColor: Colors.white,
+              side: const BorderSide(color: Color(0xFFC8E6C9), width: 1.2),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(20),
+              ),
+              onPressed: () => onPick(s),
+              elevation: 0,
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
             ),
-            const SizedBox(width: 8),
-          ],
-        ],
+          );
+        }).toList(),
       ),
     );
   }
